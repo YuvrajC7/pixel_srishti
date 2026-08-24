@@ -1,0 +1,92 @@
+PIXEL-SRISHTI
+Agentic Vision-Language Intelligence for Multimodal Remote Sensing & Watershed Development
+Product Requirement Document — v2.0 (Optimized)
+Team: JALDI THE LATE
+Theme: Space Technology & Disaster Management (Geospatial Analysis)
+Converged Problem Statements: SIH26167 (ISRO) + SIH26015 (MoRD / DoLR)
+Target Deployment: Smart India Hackathon 2026
+
+Table of Contents
+
+1. Executive Summary & Convergence Strategy
+PIXEL-Srishti is a strategic convergence of ISRO's SatQuery AI (PS ID 26167) and the Ministry of Rural Development's Watershed Development monitoring initiative (PS ID 26015). Rather than treating these as two separate builds, PIXEL-Srishti uses one agentic, vision-language backbone as the engine and points it at two paying customers: a national space agency that needs rigorous multimodal benchmarks satisfied, and a rural development department that needs field-usable, low-bandwidth insight from the SRISHTI-DRISHTI 30m platform.
+The core bet: both problem statements are, underneath the jargon, the same technical challenge — turning geo-coded/satellite imagery into structured, queryable, evidence-grounded answers. PS26167 defines the hard AI core (agentic VQA, grounding, change detection, optical-SAR fusion). PS26015 defines a concrete, high-impact deployment surface (watershed monitoring for DoLR field officers) that showcases the same core under real operational constraints — sparse connectivity, non-expert users, and administrative accountability.
+This convergence is also a strategic scoring advantage: judges evaluating PS26167 will see a live, non-benchmark use case beyond academic datasets; judges anchored on PS26015's watershed outcomes will see a technically rigorous, ISRO-grade AI core rather than a simple GIS dashboard.
+2. Problem Statement Analysis — What's Broken Today
+2.1 SIH26167 — SatQuery AI (ISRO)
+Current remote-sensing AI tools are built as single-task silos (one model for classification, another for VQA, another for change detection), forcing non-expert users to understand GIS workflows, sensor characteristics, and model selection just to ask a simple question of a satellite image. Generic LLMs/VLMs, without domain adaptation, cannot reliably reason over multispectral or SAR imagery or fuse information across time and sensor type.
+Core gap: no unified, agentic interface that routes a single natural-language query across single-image, bi-temporal, and cross-modal (optical+SAR) reasoning while remaining auditable enough for institutional (ISRO/SAC) evaluation.
+2.2 SIH26015 — Watershed Geospatial Visualization (MoRD/DoLR)
+Watershed programs generate large volumes of geo-tagged field photographs, but these are used almost exclusively for documentation, not analysis. Monitoring relies on manual field surveys that are slow, inconsistent, and spatially incomplete. There is no standardized way to fuse field-level geo-coded images with SRISHTI-DRISHTI's 30m satellite layers to produce thematic, decision-ready maps (land use, drainage, vegetation, intervention impact).
+Core gap: no scalable analytical bridge between ground-truth photos and satellite-derived thematic layers — planners cannot easily answer "what changed, where, and did the intervention work?"
+2.3 Gap-to-Solution Mapping
+
+2.4 What We Will Achieve
+A working agentic system that satisfies every mandatory functional requirement of PS26167: single-image VQA + one additional task, bi-temporal change VQA, optical-SAR fusion, and agentic orchestration with an auditable execution trace.
+A watershed-specific deployment (PS26015) that turns SRISHTI-DRISHTI imagery and field photos into land-use, drainage, and vegetation-change maps a District Watershed Officer can actually query in plain language.
+A single reusable AI core, demonstrated across a national-security-grade benchmark suite (VRSBench, RSVQA, CDVQA) and a real governance use case — proving both technical depth and deployability.
+A demo narrative judges can follow in under five minutes: ask a question, watch the agent choose tools, see grounded visual evidence and a downloadable report.
+
+3. Proposed Solution & Unique Value Proposition
+PIXEL-Srishti is an interactive web application backed by an LLM-driven agentic controller. The controller receives a natural-language query plus one or more geospatial inputs, validates compatibility, classifies task intent, and orchestrates a registry of specialist remote-sensing models — returning grounded text, visual evidence, and a confidence-scored, auditable execution trace.
+3.1 What Makes This Win, Not Just Work
+Dual-purpose core: one orchestration engine, two demonstrably different, judge-relevant deployments — reduces build risk while doubling perceived scope.
+Evidence-grounded, not just generative: every answer is tied to a bounding box, mask, or map layer — directly answers ISRO's requirement for visual evidence and confidence, not free-text hallucination.
+Auditability as a first-class feature: JSON execution trace turns a black-box AI demo into something a government evaluator can trust — this is a differentiator most hackathon teams skip.
+Graceful degradation: if SAR or T2 imagery is missing, the controller explains what's missing and requests it — shows engineering maturity over a scripted happy-path demo.
+Field-first UX for the watershed track: works with low-bandwidth photo uploads and a simplified query mode for non-GIS users, not just a GIS analyst dashboard.
+4. System Architecture & Agentic Workflow
+The platform is organized into four layers: input & validation, agentic orchestration, the specialist tool registry, and integration/presentation.
+
+4.1 Request Flow
+User submits a natural-language query with one or more geospatial inputs (single image, cross-modal pair, or bi-temporal pair).
+Controller validates modality, format (GeoTIFF/TIFF/approved benchmark formats), resolution, and CRS/EPSG alignment.
+Intent classifier maps the query to a task class: single-image VQA/captioning/grounding, bi-temporal change, or optical-SAR fusion.
+Task planner selects and sequences the minimum sufficient set of specialist tools from the registry and executes with permitted parameters only.
+Integration layer merges textual and spatial outputs, computes a confidence score, and renders visual evidence alongside a machine-readable execution summary.
+
+5. Functional Requirements & Tool Registry
+
+5.1 Mandatory Coverage Checklist (PS26167)
+Single-image VQA — mandatory baseline. ✅ Covered by RS-VQA module.
+One additional single-image task (captioning or grounding). ✅ Covered by Grounding module.
+Bi-temporal change description / change-VQA. ✅ Covered by ChangeFormer module.
+Optical-SAR cross-modal joint analysis. ✅ Covered by Fusion module.
+Agentic orchestration with auditable execution trace. ✅ Covered by the Controller.
+6. Core Technical Specifications
+6.1 Agentic Task Routing & Validation
+The orchestrator evaluates input context against strict tool definitions before execution. If a user asks a temporal-change question but supplies only one image, the controller halts gracefully and requests the missing T2 image rather than guessing. Compatibility checks cover spatial resolution, EPSG code alignment, and file format.
+6.2 Geospatial Ingestion Engine
+An automated pipeline built on GDAL and Rasterio normalizes incoming imagery: CRS reprojection, raster tiling for memory-efficient local/cloud inference, and channel normalization across optical and radar sensors with differing dynamic ranges.
+6.3 Auditability Layer
+Every pipeline run emits a machine-readable JSON trace recording tool selection, model hyperparameters, execution latency, and geographic coordinates — satisfying PS26167's requirement that only the observable execution trace (not internal reasoning) be evaluated, and giving PS26015 the administrative traceability government reviewers expect.
+6.4 Interactive Presentation Layer
+The web interface provides interactive map overlays, a split-screen swipe component for before/after change comparison, and automated, formatted report generation (PDF/HTML) for field agents and evaluators alike.
+6.5 Data & Model Adaptation Strategy
+Primary adaptation dataset: BigEarthNet (co-registered Sentinel-1 SAR + Sentinel-2 multispectral with text annotations) for base remote-sensing grounding of the VLM.
+Evaluation benchmarks: VRSBench and RSVQA for single-image captioning/grounding/VQA; CDVQA for multitemporal change-based VQA.
+Institutional evaluation: pre-georeferenced, co-registered Cartosat-2S optical and RISAT SAR pairs (ISRO/SAC set) — architecture must handle Indian satellite data natively, not just Sentinel data.
+Given hackathon time constraints, prioritize parameter-efficient fine-tuning (LoRA/QLoRA) of an open-source remote-sensing VLM (e.g., a GeoChat/RS-adapted base) over training from scratch.
+
+7. Innovation & Competitive Differentiators
+8. Feasibility: Tech Stack & Build Plan
+8.1 Recommended Stack
+
+8.2 Build Sequencing Principle
+Given hackathon time constraints, the team should not attempt to fine-tune every model from scratch. Prioritize: (1) get pretrained/lightly-adapted models working end-to-end through the orchestrator first, (2) fine-tune only the single highest-impact component (the core VLM on BigEarthNet) with LoRA, (3) polish the presentation and auditability layer last, since that is what judges directly interact with.
+9. Impact, Scalability & Real-World Alignment
+Direct alignment with DoLR's watershed monitoring mandate — reduces reliance on manual field surveys and enables evidence-based decision-making at scale.
+Reusable across other MoRD/ISRO geospatial programs (forestry, disaster response, urban planning) without re-architecting the core.
+Scales horizontally: adding a new specialist tool to the registry (e.g., flood-extent mapping) does not require touching the orchestration layer.
+Supports India's broader Digital Public Infrastructure goals by making satellite intelligence accessible to non-expert government users via natural language.
+
+10. Evaluation Strategy — Mapped to Judging Criteria
+11. Risk Register & Mitigation
+
+12. Implementation Roadmap (Hackathon Sprint)
+13. Deliverables
+Interactive GUI / web application with the agentic remote-sensing AI backend (fulfills PS26167 expected solution).
+Watershed monitoring module with thematic maps (land use, drainage, vegetation, change) for DoLR use (fulfills PS26015 expected solutions a–g).
+Codebase, model weights/adapters, and a test + demonstration script.
+Machine-readable execution trace samples and a downloadable evaluation report per query.
+Final PRD and pitch deck aligned to this document.
