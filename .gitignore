@@ -13,3 +13,13 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local Documents
+*.pdf
+*.pptx
+*.docx
+*.html
+*.ipynb
+*.txt
+~$*
+generate_*.py
