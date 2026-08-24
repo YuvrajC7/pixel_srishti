@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PIXEL-Srishti | SIH Review 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/simple.min.css" id="theme">
+  <style>
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .reveal p, .reveal li {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #334155;
+      font-size: 1.1em;
+    }
+    .reveal ul {
+      margin-top: 20px;
+    }
+    .reveal li {
+      margin-bottom: 15px;
+    }
+    .highlight {
+      color: #2563eb;
+      font-weight: bold;
+    }
+    .title-slide {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    .mermaid {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+    .footer-badge {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      font-size: 0.4em;
+      color: #64748b;
+      font-family: sans-serif;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- SLIDE 1 -->
+      <section class="title-slide" data-transition="fade">
+        <h1 style="color: #1e3a8a; font-size: 3.5em;">PIXEL-Srishti</h1>
+        <h3>Agentic Geospatial Assistant for Watershed Monitoring</h3>
+        <p style="margin-top: 50px; font-weight: bold; color: #475569;">Team: JALDI THE LATE</p>
+        <p style="font-size: 0.8em; color: #64748b;">Smart India Hackathon 2026 - Review 1</p>
+      </section>
+
+      <!-- SLIDE 2 -->
+      <section data-transition="slide">
+        <h2>The Core Problem</h2>
+        <hr style="border: 2px solid #3b82f6; width: 100px; margin: 0 auto 30px auto;">
+        <ul>
+          <li><strong>Data Silos:</strong> Satellites capture optical, SAR, and multispectral data, but they are processed in isolation.</li>
+          <li><strong>High Barrier to Entry:</strong> Analyzing GeoTIFFs requires complex desktop GIS software and highly specialized training.</li>
+          <li><strong>Operational Bottleneck:</strong> Field officers cannot easily query data to track critical metrics like vegetation recovery or water body expansion, forcing reliance on manual field surveys.</li>
+        </ul>
+      </section>
+
+      <!-- SLIDE 3 -->
+      <section data-transition="slide">
+        <h2>Our Solution</h2>
+        <hr style="border: 2px solid #3b82f6; width: 100px; margin: 0 auto 30px auto;">
+        <p>A multimodal AI interface that democratizes spatial analysis.</p>
+        <ul>
+          <li><span class="highlight">Natural Language Querying:</span> Administrators ask plain-English questions ("Show me drainage changes since last year").</li>
+          <li><span class="highlight">Agentic Orchestration:</span> The system automatically selects the correct specialist model (Change Detection, Segmentation) to answer the query.</li>
+          <li><span class="highlight">Interactive Mapping:</span> Returns highly precise thematic GeoJSON masks rendered directly on a web-based Leaflet dashboard.</li>
+        </ul>
+      </section>
+
+      <!-- SLIDE 4 -->
+      <section data-transition="zoom">
+        <h2>System Architecture</h2>
+        <div class="mermaid" style="font-size: 0.6em; margin-top: 20px;">
+          graph TD
+            A[User / Field Admin] -->|Natural Language Query| B(FastAPI / React GUI)
+            B --> C{Agentic Orchestrator}
+            C -->|Intent Parsing| D[Tool Registry]
+            D -->|Optical/SAR Fusion| E(VQA / Captioning Model)
+            D -->|Water Body Changes| F(Siamese U-Net Model)
+            D -->|Land Use Maps| G(Thematic Segmentation)
+            E --> H[Aggregated Geospatial Insights]
+            F --> H
+            G --> H
+            H -->|GeoJSON/Masks| B
+        </div>
+      </section>
+
+      <!-- SLIDE 5 -->
+      <section data-transition="slide">
+        <h2>Technology Stack</h2>
+        <hr style="border: 2px solid #3b82f6; width: 100px; margin: 0 auto 30px auto;">
+        <div style="display: flex; justify-content: space-around; margin-top: 40px;">
+          <div style="width: 45%; text-align: left;">
+            <h4 style="color: #1e3a8a;">Frontend & Backend</h4>
+            <ul style="font-size: 0.85em;">
+              <li>React.js & Tailwind CSS</li>
+              <li>React-Leaflet (Mapping)</li>
+              <li>Python / FastAPI</li>
+              <li>LangGraph (Orchestrator)</li>
+            </ul>
+          </div>
+          <div style="width: 45%; text-align: left;">
+            <h4 style="color: #1e3a8a;">Geospatial & ML</h4>
+            <ul style="font-size: 0.85em;">
+              <li>Rasterio & GeoPandas</li>
+              <li>LLaVA / Grounding DINO</li>
+              <li>U-Net (Segmentation)</li>
+              <li>PyTorch & Transformers</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- SLIDE 6 -->
+      <section data-transition="slide" class="title-slide">
+        <h2>Impact & Scalability</h2>
+        <hr style="border: 2px solid #3b82f6; width: 100px; margin: 0 auto 30px auto;">
+        <ul>
+          <li>Reduces weeks of manual GIS processing down to <span class="highlight">instant automated insights</span>.</li>
+          <li>Fundamentally eliminates the GIS training bottleneck for rural district administrators.</li>
+          <li>Highly scalable beyond watersheds: easily adaptable for crop-yield estimation, flood mapping, and urban sprawl tracking.</li>
+        </ul>
+        <h3 style="margin-top: 50px; color: #1e3a8a;">Thank You</h3>
+      </section>
+
+    </div>
+    <div class="footer-badge">TEAM JALDI THE LATE | SIH 2026</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      slideNumber: true,
+      transition: 'slide'
+    });
+  </script>
+</body>
+</html>
