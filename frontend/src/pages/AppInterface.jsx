@@ -69,7 +69,7 @@ const ZoomControls = ({ setMapInstance }) => {
 
 export default function AppInterface() {
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Welcome to PIXEL Srishti Orbital Interface. Select your analysis mode and upload geospatial telemetry.' }
+    { role: 'assistant', text: 'Welcome to PIXEL Srishti Orbital Interface.\nSelect your analysis mode and upload geospatial telemetry.' }
   ]);
   const [input, setInput] = useState('');
   
@@ -78,7 +78,7 @@ export default function AppInterface() {
   const [fileT2, setFileT2] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
-  const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]);
+  const [targetCoord, setTargetCoord] = useState(null);
   
   // New State for Map Tools
   const [mapInstance, setMapInstance] = useState(null);
@@ -98,7 +98,7 @@ export default function AppInterface() {
     // Quick hack to detect if user typed coordinates
     const coordMatch = input.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
     if (coordMatch) {
-        setMapCenter([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])]);
+        setTargetCoord([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])]);
     }
 
     const currentInput = input;
@@ -136,7 +136,7 @@ export default function AppInterface() {
   };
   
   const handleMapClick = (coord) => {
-    setMapCenter(coord);
+    setTargetCoord(coord);
     setIsPinMode(false);
     setInput(prev => prev + (prev.trim() ? ' ' : '') + `${coord[0].toFixed(6)}, ${coord[1].toFixed(6)}`);
     if (!chatOpen) setChatOpen(true);
@@ -165,18 +165,20 @@ export default function AppInterface() {
         
         {/* HERO SATELLITE MAP */}
         <div className="absolute inset-0 z-0">
-           <MapContainer center={mapCenter} zoom={5} className="h-full w-full" zoomControl={false}>
+           <MapContainer center={[20.5937, 78.9629]} zoom={5} className="h-full w-full" zoomControl={false}>
               <TileLayer
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="&copy; Esri"
               />
-              <MapController center={mapCenter} />
+              <MapController center={targetCoord} />
               <MapEventsHandler isPinMode={isPinMode} setHoverCoord={setHoverCoord} handleMapClick={handleMapClick} />
               <ZoomControls setMapInstance={setMapInstance} />
               
-              <Marker position={mapCenter}>
-                <Popup className="text-black font-sans font-medium">Target Sector Acquired.</Popup>
-              </Marker>
+              {targetCoord && (
+                <Marker position={targetCoord}>
+                  <Popup className="text-black font-sans font-medium">Target Sector Acquired.</Popup>
+                </Marker>
+              )}
            </MapContainer>
         </div>
         
@@ -186,6 +188,16 @@ export default function AppInterface() {
            <div className={`bg-[#02040A]/80 backdrop-blur-md border border-white/10 text-white text-xs px-3 py-2 rounded-lg font-mono tracking-widest shadow-lg transition-opacity duration-200 absolute right-[60px] top-1/2 -translate-y-1/2 whitespace-nowrap ${isPinMode && hoverCoord ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {hoverCoord ? `${hoverCoord[0].toFixed(5)}, ${hoverCoord[1].toFixed(5)}` : '0.00000, 0.00000'}
            </div>
+
+           {targetCoord && (
+             <button 
+               onClick={() => setTargetCoord(null)}
+               className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg border backdrop-blur-md bg-red-600/80 border-red-500 text-white hover:bg-red-500 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+               title="Clear Pin"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+             </button>
+           )}
 
            <button 
              onClick={() => setIsPinMode(!isPinMode)}
