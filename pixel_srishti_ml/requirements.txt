@@ -1,0 +1,15 @@
+torch>=2.0.0
+torchvision
+transformers>=4.35.0
+peft
+bitsandbytes
+accelerate
+segmentation-models-pytorch
+albumentations
+opencv-python-headless
+pandas
+numpy
+pillow
+rasterio
+tqdm
+scikit-learn
