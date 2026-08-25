@@ -105,12 +105,16 @@ export default function AppInterface() {
     const recognition = new window.webkitSpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = 'en-IN'; // Indian English, Bhuvan style
+    recognition.lang = 'en-IN'; 
     
     recognition.onstart = () => setIsRecording(true);
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+      const finalInput = input + (input ? ' ' : '') + transcript;
+      setInput(finalInput);
+      
+      // Auto-send when voice is finished
+      handleSend(finalInput);
     };
     recognition.onerror = (e) => console.error("Speech recognition error", e);
     recognition.onend = () => setIsRecording(false);
@@ -134,19 +138,42 @@ export default function AppInterface() {
   const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
   useEffect(() => { scrollToBottom(); }, [messages, loading]);
 
-  const handleSend = async () => {
-    if (!input.trim() && !fileT1 && !fileT2) return;
+  const INDIAN_STATES = {
+    "andhra pradesh": [15.9129, 79.7400], "arunachal pradesh": [28.2180, 94.7278], "assam": [26.2006, 92.9376], "bihar": [25.0961, 85.3131],
+    "chhattisgarh": [21.2787, 81.8661], "goa": [15.2993, 74.1240], "gujarat": [22.2587, 71.1924], "haryana": [29.0588, 76.0856],
+    "himachal pradesh": [31.1048, 77.1665], "jharkhand": [23.6102, 85.2799], "karnataka": [15.3173, 75.7139], "kerala": [10.8505, 76.2711],
+    "madhya pradesh": [22.9734, 78.6569], "maharashtra": [19.7515, 75.7139], "manipur": [24.6637, 93.9063], "meghalaya": [25.4670, 91.3662],
+    "mizoram": [23.1645, 92.9376], "nagaland": [26.1584, 94.5624], "odisha": [20.9517, 85.0985], "punjab": [31.1471, 75.3412],
+    "rajasthan": [27.0238, 74.2179], "sikkim": [27.5330, 88.5122], "tamil nadu": [11.1271, 78.6569], "telangana": [18.1124, 79.0193],
+    "tripura": [23.9408, 91.9882], "uttar pradesh": [26.8467, 80.9462], "uttarakhand": [30.0668, 79.0193], "west bengal": [22.9868, 87.8550],
+    "delhi": [28.7041, 77.1025], "jammu and kashmir": [33.7782, 76.5762], "ladakh": [34.1526, 77.5771],
+    "mumbai": [19.0760, 72.8777], "bangalore": [12.9716, 77.5946], "chennai": [13.0827, 80.2707], "kolkata": [22.5726, 88.3639], "hyderabad": [17.3850, 78.4867]
+  };
 
-    const userMessage = { role: 'user', text: input, hasFile: !!fileT1 || !!fileT2 };
+  const handleSend = async (overrideInput = null) => {
+    const textToProcess = (typeof overrideInput === 'string' ? overrideInput : input);
+    if (!textToProcess.trim() && !fileT1 && !fileT2) return;
+
+    // Efficient Local Geocoding Interceptor
+    const lowerText = textToProcess.toLowerCase();
+    for (const [location, coords] of Object.entries(INDIAN_STATES)) {
+      if (lowerText.includes(location)) {
+        if (mapInstance) {
+          mapInstance.flyTo(coords, 7, { duration: 2.0 });
+        }
+        break; // Stop after first match
+      }
+    }
+
+    const userMessage = { role: 'user', text: textToProcess, hasFile: !!fileT1 || !!fileT2 };
     setMessages(prev => [...prev, userMessage]);
     
     // Quick hack to detect if user typed coordinates
-    const coordMatch = input.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
-    if (coordMatch) {
-        setTargetCoord([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])]);
+    const coordMatch = textToProcess.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+    if (coordMatch && mapInstance) {
+        mapInstance.flyTo([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])], 14, { duration: 1.5 });
     }
 
-    const currentInput = input;
     const currentMode = mode;
     const currentT1 = fileT1;
     const currentT2 = fileT2;
@@ -402,12 +429,7 @@ export default function AppInterface() {
                   placeholder="Type coordinates or ask query..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                 />
               </div>
               
@@ -419,7 +441,7 @@ export default function AppInterface() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
               </button>
               <button 
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={loading || (!input.trim() && !fileT1 && !fileT2)}
                 className="w-12 h-12 shrink-0 bg-blue-600 hover:bg-blue-500 disabled:bg-white/10 disabled:text-slate-500 text-white rounded-xl flex items-center justify-center shadow-lg transition-all"
               >
@@ -432,6 +454,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
