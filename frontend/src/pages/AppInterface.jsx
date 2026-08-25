@@ -206,9 +206,19 @@ export default function AppInterface() {
 
       <div className="flex-1 relative flex overflow-hidden">
         
+                <style>{`
+          /* Dark mode for Leaflet and Geoman Toolbars */
+          .leaflet-bar { border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5) !important; }
+          .leaflet-bar a { background-color: rgba(2,4,10,0.85) !important; color: #94a3b8 !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; backdrop-filter: blur(12px); width: 36px !important; height: 36px !important; line-height: 36px !important; }
+          .leaflet-bar a:hover { background-color: rgba(255,255,255,0.1) !important; color: #fff !important; }
+          .leaflet-pm-icon { filter: invert(0.8) sepia(1) hue-rotate(180deg) saturate(2) !important; }
+          .leaflet-control-layers { background-color: rgba(2,4,10,0.85) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; backdrop-filter: blur(12px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5) !important; }
+          .leaflet-control-layers-toggle { filter: invert(0.8) !important; }
+          .leaflet-control-layers-expanded { padding: 10px !important; background-color: rgba(2,4,10,0.95) !important; }
+        `}</style>
         {/* HERO SATELLITE MAP */}
         <div className="absolute inset-0 z-0">
-           <MapContainer center={[20.5937, 78.9629]} zoom={5} className="h-full w-full" zoomControl={false}>
+           <MapContainer center={[20.5937, 78.9629]} zoom={5} maxZoom={17} className="h-full w-full" zoomControl={false}>
                             <LayersControl position="bottomleft">
                 <LayersControl.BaseLayer checked name="Satellite (Esri Imagery)">
                   <TileLayer
@@ -421,5 +431,6 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
