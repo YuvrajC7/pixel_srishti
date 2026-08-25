@@ -118,3 +118,83 @@ def tool_answer_vqa(img_path, question):
     torch.cuda.empty_cache()
     
     return answer
+
+def tool_segment_image(img_path, checkpoint_path="checkpoints/latest_seg_model.pth"):
+    """
+    Tool for segmenting land cover (Water, Buildings, Woodlands) in a single satellite image.
+    Uses DeepLabV3+ with ResNet34 backbone, infers, saves colored mask, and clears VRAM.
+    """
+    print("[Agent Tool] Running DeepLabV3+ Segmentation...")
+    import segmentation_models_pytorch as smp
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Initialize model with 5 classes as trained
+    model = smp.DeepLabV3Plus(
+        encoder_name="resnet34",
+        encoder_weights=None,
+        in_channels=3,
+        classes=5,
+    ).to(device)
+    
+    if os.path.exists(checkpoint_path):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        print("[Warning] No DeepLabV3+ checkpoint found! Did you copy latest_seg_model.pth from Kaggle?")
+        
+    model.eval()
+    
+    # Prepare Image
+    transform = T.Compose([
+        T.Resize((512, 512)),
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    
+    img = Image.open(img_path).convert('RGB')
+    orig_size = img.size 
+    t_img = transform(img).unsqueeze(0).to(device)
+    
+    # Inference
+    with torch.no_grad():
+        output = model(t_img)
+        pred_mask = torch.argmax(output, dim=1).squeeze().cpu().numpy()
+        
+    # Generate statistics for the LLM Agent
+    total_pixels = pred_mask.size
+    pct_buildings = (np.sum(pred_mask == 1) / total_pixels) * 100
+    pct_woodlands = (np.sum(pred_mask == 2) / total_pixels) * 100
+    pct_water = (np.sum(pred_mask == 3) / total_pixels) * 100
+    pct_roads = (np.sum(pred_mask == 4) / total_pixels) * 100
+    
+    nl_answer = (
+        f"Semantic segmentation analysis complete. Area breakdown:\n"
+        f"- Buildings: {pct_buildings:.2f}%\n"
+        f"- Woodlands: {pct_woodlands:.2f}%\n"
+        f"- Water Bodies: {pct_water:.2f}%\n"
+        f"- Roads/Trails: {pct_roads:.2f}%"
+    )
+    
+    # Map predictions to colors for the UI display
+    # 0: Background (Black), 1: Buildings (Red), 2: Woodlands (Green), 3: Water (Blue), 4: Roads (Gray)
+    color_map = np.array([
+        [0, 0, 0],
+        [255, 0, 0],
+        [0, 255, 0],
+        [0, 0, 255],
+        [128, 128, 128]
+    ])
+    colored_mask = color_map[pred_mask]
+    
+    mask_img = Image.fromarray(colored_mask.astype(np.uint8))
+    mask_img = mask_img.resize(orig_size, Image.NEAREST)
+    output_mask_path = "frontend_segmentation_mask.png"
+    mask_img.save(output_mask_path)
+    
+    # VRAM SAVING HACK
+    del model
+    torch.cuda.empty_cache()
+    
+    return nl_answer, output_mask_path
+
