@@ -148,7 +148,12 @@ export default function AppInterface() {
     "tripura": [23.9408, 91.9882, 7, "State"], "uttar pradesh": [26.8467, 80.9462, 7, "State"], "uttarakhand": [30.0668, 79.0193, 7, "State"], "west bengal": [22.9868, 87.8550, 7, "State"],
     "jammu and kashmir": [33.7782, 76.5762, 7, "Territory"], "ladakh": [34.1526, 77.5771, 7, "Territory"],
     "delhi": [28.7041, 77.1025, 11, "Megacity"], "mumbai": [19.0760, 72.8777, 12, "Megacity"], "bangalore": [12.9716, 77.5946, 12, "Megacity"], 
-    "chennai": [13.0827, 80.2707, 12, "Megacity"], "kolkata": [22.5726, 88.3639, 12, "Megacity"], "hyderabad": [17.3850, 78.4867, 12, "Megacity"]
+    "chennai": [13.0827, 80.2707, 12, "Megacity"], "kolkata": [22.5726, 88.3639, 12, "Megacity"], "hyderabad": [17.3850, 78.4867, 12, "Megacity"],
+    "pune": [18.5204, 73.8567, 12, "City"], "ahmedabad": [23.0225, 72.5714, 12, "City"], "surat": [21.1702, 72.8311, 12, "City"], 
+    "jaipur": [26.9124, 75.7873, 12, "City"], "kanpur": [26.4499, 80.3319, 12, "City"], "lucknow": [26.8467, 80.9462, 12, "City"], 
+    "nagpur": [21.1458, 79.0882, 12, "City"], "indore": [22.7196, 75.8577, 12, "City"], "patna": [25.5941, 85.1376, 12, "City"], 
+    "bhopal": [23.2599, 77.4126, 12, "City"], "thane": [19.2183, 72.9781, 12, "City"], "agra": [27.1767, 78.0081, 12, "City"], 
+    "vadodara": [22.3072, 73.1812, 12, "City"], "ghaziabad": [28.6692, 77.4538, 12, "City"], "ludhiana": [30.9010, 75.8573, 12, "City"]
   };
 
   const levenshtein = (a, b) => {
@@ -234,7 +239,7 @@ export default function AppInterface() {
             const lon = parseFloat(place.lon);
             
             let zoomLvl = 12;
-            if (place.type === 'administrative' || place.type === 'state') zoomLvl = 7;
+            
             if (place.class === 'amenity' || place.class === 'building') zoomLvl = 15;
             
             if (mapInstance) mapInstance.flyTo([lat, lon], zoomLvl, { duration: 2.0 });
@@ -546,6 +551,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
