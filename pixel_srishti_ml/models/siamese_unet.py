@@ -23,7 +23,7 @@ class SiameseUNet(nn.Module):
             decoder_channels=(256, 128, 64, 32, 16),
             n_blocks=5,
             
-            center=False,
+            
             attention_type=None
         )
         
