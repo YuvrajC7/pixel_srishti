@@ -194,12 +194,10 @@ export default function AppInterface() {
 
     try {
       const formData = new FormData();
-      formData.append('message', textToProcess || 'Execute analysis');
-      formData.append('inputMode', currentMode);
-      formData.append('isBenchmark', 'false');
+      formData.append('query', textToProcess || 'Execute analysis');
       
-      if (currentT1) formData.append('image1', currentT1);
-      if (currentT2) formData.append('image2', currentT2);
+      if (currentT1) formData.append('images', currentT1);
+      if (currentT2) formData.append('images', currentT2);
 
       const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
       const res = await fetch(baseUrl + '/api/chat', {
@@ -209,7 +207,11 @@ export default function AppInterface() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Network response was not ok');
+        let errMsg = errData.detail || 'Network response was not ok';
+        if (typeof errMsg === 'object') {
+          errMsg = JSON.stringify(errMsg);
+        }
+        throw new Error(errMsg);
       }
       const data = await res.json();
       
@@ -465,6 +467,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
