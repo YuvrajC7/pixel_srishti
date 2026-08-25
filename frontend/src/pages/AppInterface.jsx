@@ -386,14 +386,14 @@ export default function AppInterface() {
            <div className="flex flex-col bg-[#02040A]/80 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-lg">
              <button 
                onClick={() => mapInstance?.zoomIn()}
-               className="w-12 h-12 flex items-center justify-center text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 transition-colors border-b border-white/10"
+               className="w-12 h-12 flex items-center justify-center text-blue-400 hover:bg-blue-400/20 hover:text-blue-300 transition-colors border-b border-white/10"
                title="Zoom In"
              >
                <Plus size={20} />
              </button>
              <button 
                onClick={() => mapInstance?.zoomOut()}
-               className="w-12 h-12 flex items-center justify-center text-blue-500 hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+               className="w-12 h-12 flex items-center justify-center text-blue-400 hover:bg-blue-400/20 hover:text-blue-300 transition-colors"
              >
                <Minus size={20} />
              </button>
@@ -404,7 +404,7 @@ export default function AppInterface() {
         <div className={`absolute top-6 z-10 transition-all duration-500 ease-in-out group ${chatOpen ? 'right-[500px]' : 'right-16'}`}>
            
            {/* The Icon Trigger */}
-           <div className="w-12 h-12 bg-[#02040A]/80 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center text-blue-500 shadow-2xl cursor-pointer hover:bg-blue-500/20 transition-all">
+           <div className="w-12 h-12 bg-[#02040A]/80 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center text-blue-400 shadow-2xl cursor-pointer hover:bg-blue-400/20 transition-all">
              <MapIcon size={22} />
            </div>
 
@@ -466,7 +466,7 @@ export default function AppInterface() {
         {/* CHAT TOGGLE BUTTON */}
         <button 
           onClick={() => setChatOpen(!chatOpen)}
-          className={`absolute top-6 z-30 bg-[#02040A] hover:bg-white/10 text-blue-500 border border-blue-500/30 p-2.5 rounded-l-xl hover:text-blue-400 shadow-2xl backdrop-blur-md transition-all duration-500 ease-in-out flex items-center justify-center ${chatOpen ? 'right-[450px]' : 'right-0'}`}
+          className={`absolute top-6 z-30 bg-[#02040A] hover:bg-white/10 text-blue-400 border border-blue-400/30 p-2.5 rounded-l-xl hover:text-blue-400 shadow-2xl backdrop-blur-md transition-all duration-500 ease-in-out flex items-center justify-center ${chatOpen ? 'right-[450px]' : 'right-0'}`}
         >
           {chatOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
@@ -546,6 +546,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
