@@ -26,6 +26,9 @@ const GeomanInit = ({ setInput }) => {
     });
     map.pm.setLang('en');
     
+    // Disable continuous drawing globally so the user has to re-click the tool
+    map.pm.setGlobalOptions({ continueDrawing: false });
+    
     // Listen for drawn items (like markers)
     map.on('pm:create', (e) => {
       if (e.shape === 'Marker') {
@@ -36,8 +39,13 @@ const GeomanInit = ({ setInput }) => {
         // Append to chat input
         setInput(prev => prev + (prev.trim() ? ' ' : '') + `${lat}, ${lng}`);
         
-        // Zoom in to the marker
-        map.flyTo([coord.lat, coord.lng], map.getZoom() > 12 ? map.getZoom() : 14, { duration: 1.5 });
+        // Force disable drawing mode immediately after one click
+        map.pm.disableDraw();
+        
+        // Zoom in to the marker with a slight delay to ensure Geoman finishes processing the click
+        setTimeout(() => {
+          map.flyTo([coord.lat, coord.lng], Math.max(map.getZoom(), 14), { duration: 1.5 });
+        }, 50);
       }
     });
     
@@ -409,6 +417,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
