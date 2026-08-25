@@ -128,7 +128,7 @@ export default function AppInterface() {
           const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
           if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.detail || 'Network response was not ok'); }
           const data = await res.json();
-          replyText = `[Change Detection Specialist]:\n${data.result}`;
+          replyText = `[Change Detection Specialist]:\n${Array.isArray(data.result) ? data.result[0] : data.result}`;
       } 
       else if (currentMode === 'SINGLE_IMAGE') {
           if (!currentT1) {
