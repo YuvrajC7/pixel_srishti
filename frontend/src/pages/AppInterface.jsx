@@ -126,7 +126,7 @@ export default function AppInterface() {
           formData.append('image1', currentT1);
           formData.append('image2', currentT2);
           const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
-          if (!res.ok) throw new Error('Network response was not ok');
+          if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.detail || 'Network response was not ok'); }
           const data = await res.json();
           replyText = `[Change Detection Specialist]:\n${data.result}`;
       } 
@@ -141,7 +141,7 @@ export default function AppInterface() {
               const formData = new FormData();
               formData.append('image', currentT1);
               const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
-              if (!res.ok) throw new Error('Network response was not ok');
+              if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.detail || 'Network response was not ok'); }
               const data = await res.json();
               replyText = `[Segmentation Specialist]:\n${data.description}`;
               meta = { mask_path: data.mask_path };
@@ -151,7 +151,7 @@ export default function AppInterface() {
               formData.append('image', currentT1);
               formData.append('question', currentInput || 'Describe this image in detail.');
               const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
-              if (!res.ok) throw new Error('Network response was not ok');
+              if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.detail || 'Network response was not ok'); }
               const data = await res.json();
               replyText = `[VQA Specialist]:\n${data.answer}`;
           }
@@ -163,7 +163,7 @@ export default function AppInterface() {
       setMessages(prev => [...prev, { role: 'assistant', text: replyText, metadata: meta }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Error connecting to the orchestration backend. Check if the ML server is running or if the VITE_API_URL is correct.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'API Error: ' + error.message }]);
     } finally {
       setLoading(false);
     }
