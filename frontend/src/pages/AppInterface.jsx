@@ -185,6 +185,13 @@ export default function AppInterface() {
       return newMsgs;
     });
 
+    // Short-circuit: If the user just gave a location/navigation command and hasn't uploaded images,
+    // skip hitting the ML backend to prevent the "No images provided" error.
+    if (automatedResponse && !fileT1 && !fileT2) {
+      setInput('');
+      return;
+    }
+
     const currentMode = mode;
     const currentT1 = fileT1;
     const currentT2 = fileT2;
@@ -467,6 +474,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
