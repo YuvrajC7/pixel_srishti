@@ -395,6 +395,21 @@ export default function AppInterface() {
 
           <div className="p-5 bg-black/40 border-t border-white/10">
             <div className="flex gap-3 items-end">
+              <div className="flex-1 bg-[#02040A] border border-white/10 rounded-2xl p-1.5 pl-4 flex items-center gap-2 focus-within:border-blue-500/50 transition-colors shadow-inner">
+                <textarea
+                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-100 placeholder:text-slate-500 resize-none max-h-32 py-2.5"
+                  rows="1"
+                  placeholder="Type coordinates or ask query..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                />
+              </div>
               
               <button 
                 onClick={startVoiceSearch}
@@ -417,6 +432,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
