@@ -166,15 +166,40 @@ export default function AppInterface() {
       if (mapInstance) mapInstance.flyTo([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])], 14, { duration: 1.5 });
       automatedResponse = { role: 'assistant', text: `[System]: Navigational coordinates confirmed. Targeting sector [${coordMatch[1]}, ${coordMatch[2]}].` };
     } else {
-      // Efficient Local Geocoding Interceptor
+      // 1. Efficient Local Interceptor for States (Zoom 7)
+      let foundLocal = false;
       for (const [location, coords] of Object.entries(INDIAN_STATES)) {
-        if (lowerText.includes(location)) {
-          if (mapInstance) {
-            mapInstance.flyTo(coords, 7, { duration: 2.0 });
-          }
+        if (lowerText === location || lowerText.startsWith(location + " ") || lowerText.endsWith(" " + location) || lowerText.includes(" " + location + " ")) {
+          if (mapInstance) mapInstance.flyTo(coords, 7, { duration: 2.0 });
           const formattedLoc = location.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          automatedResponse = { role: 'assistant', text: `[System]: Geospatial entity identified. Navigating map to ${formattedLoc} at coordinates [${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}].` };
+          automatedResponse = { role: 'assistant', text: `[System]: State entity identified. Navigating map to ${formattedLoc} at coordinates [${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}].` };
+          foundLocal = true;
           break; // Stop after first match
+        }
+      }
+
+      // 2. Dynamic Fallback Interceptor for any Indian City (Zoom 12)
+      if (!foundLocal && textToProcess.length < 50) { // Only geocode short queries to prevent geocoding long conversational prompts
+        try {
+          const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(textToProcess)}&format=json&limit=1&countrycodes=in`);
+          const nomData = await nomRes.json();
+          if (nomData && nomData.length > 0) {
+            const place = nomData[0];
+            const lat = parseFloat(place.lat);
+            const lon = parseFloat(place.lon);
+            
+            // Differentiated Zoom: States get 7, Cities get 12, Specific buildings get 15
+            let zoomLvl = 12;
+            if (place.type === 'administrative' || place.type === 'state') zoomLvl = 7;
+            if (place.class === 'amenity' || place.class === 'building') zoomLvl = 15;
+            
+            if (mapInstance) mapInstance.flyTo([lat, lon], zoomLvl, { duration: 2.0 });
+            
+            const placeName = place.name || place.display_name.split(',')[0];
+            automatedResponse = { role: 'assistant', text: `[System]: City/Local entity identified. Navigating map to ${placeName} at coordinates [${lat.toFixed(4)}, ${lon.toFixed(4)}].` };
+          }
+        } catch (e) {
+          console.error("Dynamic Geocoding failed", e);
         }
       }
     }
@@ -474,6 +499,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
