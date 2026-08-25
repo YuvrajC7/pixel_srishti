@@ -191,27 +191,35 @@ export default function AppInterface() {
     } else {
       // 1. Efficient Local Interceptor with Fuzzy Matching
       let foundLocal = false;
-      const words = lowerText.split(/\s+/);
+      const cleanText = lowerText.replace(/(show me|go to|zoom to|find|locate|take me to|navigate to|in|at)\b/g, '').trim();
+      const words = cleanText.split(/\s+/);
       
       for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
         const locWords = location.split(/\s+/);
         let isMatch = false;
+        let isFuzzy = false;
         
         // Exact Substring Match
-        if (lowerText === location || lowerText.startsWith(location + " ") || lowerText.endsWith(" " + location) || lowerText.includes(" " + location + " ")) {
+        if (cleanText === location || cleanText.startsWith(location + " ") || cleanText.endsWith(" " + location) || cleanText.includes(" " + location + " ")) {
           isMatch = true;
         } else {
           // Fuzzy Match (Levenshtein Distance)
-          // We extract n-grams from the user's text matching the word length of the location
           for (let i = 0; i <= words.length - locWords.length; i++) {
             const ngram = words.slice(i, i + locWords.length).join(" ");
-            // Only allow 1 or 2 typos depending on word length to prevent false positives
             const maxTypos = location.length > 8 ? 2 : 1; 
             if (levenshtein(ngram, location) <= maxTypos) {
               isMatch = true;
+              isFuzzy = true;
               break;
             }
           }
+        }
+
+        // Specificity Check: If the user typed a long specific query (e.g. "Manipal University Jaipur"),
+        // DO NOT hijack it with the local city interceptor just because it contains the word "Jaipur".
+        // Let it fall through to Nominatim so the dynamic API can locate the exact building/POI!
+        if (isMatch && cleanText.length > location.length + 8) {
+            isMatch = false; 
         }
 
         if (isMatch) {
@@ -222,7 +230,8 @@ export default function AppInterface() {
           
           if (mapInstance) mapInstance.flyTo([lat, lon], zoomLvl, { duration: 2.0 });
           const formattedLoc = location.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          automatedResponse = { role: 'assistant', text: `[System]: ${locType} entity identified (Fuzzy Match). Navigating map to ${formattedLoc} at coordinates [${lat.toFixed(4)}, ${lon.toFixed(4)}].` };
+          const matchLabel = isFuzzy ? " (Fuzzy Match)" : "";
+          automatedResponse = { role: 'assistant', text: `[System]: ${locType} entity identified${matchLabel}. Navigating map to ${formattedLoc} at coordinates [${lat.toFixed(4)}, ${lon.toFixed(4)}].` };
           foundLocal = true;
           break; // Stop after first match
         }
@@ -551,6 +560,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
