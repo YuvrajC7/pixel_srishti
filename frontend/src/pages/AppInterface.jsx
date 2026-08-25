@@ -138,16 +138,35 @@ export default function AppInterface() {
   const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
   useEffect(() => { scrollToBottom(); }, [messages, loading]);
 
-  const INDIAN_STATES = {
-    "andhra pradesh": [15.9129, 79.7400], "arunachal pradesh": [28.2180, 94.7278], "assam": [26.2006, 92.9376], "bihar": [25.0961, 85.3131],
-    "chhattisgarh": [21.2787, 81.8661], "goa": [15.2993, 74.1240], "gujarat": [22.2587, 71.1924], "haryana": [29.0588, 76.0856],
-    "himachal pradesh": [31.1048, 77.1665], "jharkhand": [23.6102, 85.2799], "karnataka": [15.3173, 75.7139], "kerala": [10.8505, 76.2711],
-    "madhya pradesh": [22.9734, 78.6569], "maharashtra": [19.7515, 75.7139], "manipur": [24.6637, 93.9063], "meghalaya": [25.4670, 91.3662],
-    "mizoram": [23.1645, 92.9376], "nagaland": [26.1584, 94.5624], "odisha": [20.9517, 85.0985], "punjab": [31.1471, 75.3412],
-    "rajasthan": [27.0238, 74.2179], "sikkim": [27.5330, 88.5122], "tamil nadu": [11.1271, 78.6569], "telangana": [18.1124, 79.0193],
-    "tripura": [23.9408, 91.9882], "uttar pradesh": [26.8467, 80.9462], "uttarakhand": [30.0668, 79.0193], "west bengal": [22.9868, 87.8550],
-    "delhi": [28.7041, 77.1025], "jammu and kashmir": [33.7782, 76.5762], "ladakh": [34.1526, 77.5771],
-    "mumbai": [19.0760, 72.8777], "bangalore": [12.9716, 77.5946], "chennai": [13.0827, 80.2707], "kolkata": [22.5726, 88.3639], "hyderabad": [17.3850, 78.4867]
+  const INDIAN_LOCATIONS = {
+    "andhra pradesh": [15.9129, 79.7400, 7, "State"], "arunachal pradesh": [28.2180, 94.7278, 7, "State"], "assam": [26.2006, 92.9376, 7, "State"], "bihar": [25.0961, 85.3131, 7, "State"],
+    "chhattisgarh": [21.2787, 81.8661, 7, "State"], "goa": [15.2993, 74.1240, 8, "State"], "gujarat": [22.2587, 71.1924, 7, "State"], "haryana": [29.0588, 76.0856, 7, "State"],
+    "himachal pradesh": [31.1048, 77.1665, 7, "State"], "jharkhand": [23.6102, 85.2799, 7, "State"], "karnataka": [15.3173, 75.7139, 7, "State"], "kerala": [10.8505, 76.2711, 7, "State"],
+    "madhya pradesh": [22.9734, 78.6569, 7, "State"], "maharashtra": [19.7515, 75.7139, 7, "State"], "manipur": [24.6637, 93.9063, 7, "State"], "meghalaya": [25.4670, 91.3662, 7, "State"],
+    "mizoram": [23.1645, 92.9376, 7, "State"], "nagaland": [26.1584, 94.5624, 7, "State"], "odisha": [20.9517, 85.0985, 7, "State"], "punjab": [31.1471, 75.3412, 7, "State"],
+    "rajasthan": [27.0238, 74.2179, 7, "State"], "sikkim": [27.5330, 88.5122, 7, "State"], "tamil nadu": [11.1271, 78.6569, 7, "State"], "telangana": [18.1124, 79.0193, 7, "State"],
+    "tripura": [23.9408, 91.9882, 7, "State"], "uttar pradesh": [26.8467, 80.9462, 7, "State"], "uttarakhand": [30.0668, 79.0193, 7, "State"], "west bengal": [22.9868, 87.8550, 7, "State"],
+    "jammu and kashmir": [33.7782, 76.5762, 7, "Territory"], "ladakh": [34.1526, 77.5771, 7, "Territory"],
+    "delhi": [28.7041, 77.1025, 11, "Megacity"], "mumbai": [19.0760, 72.8777, 12, "Megacity"], "bangalore": [12.9716, 77.5946, 12, "Megacity"], 
+    "chennai": [13.0827, 80.2707, 12, "Megacity"], "kolkata": [22.5726, 88.3639, 12, "Megacity"], "hyderabad": [17.3850, 78.4867, 12, "Megacity"]
+  };
+
+  const levenshtein = (a, b) => {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) == a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+        }
+      }
+    }
+    return matrix[b.length][a.length];
   };
 
   const handleSend = async (overrideInput = null) => {
@@ -156,7 +175,6 @@ export default function AppInterface() {
 
     const userMessage = { role: 'user', text: textToProcess, hasFile: !!fileT1 || !!fileT2 };
     
-    // Check if we need an automated geocoding response
     let automatedResponse = null;
     const lowerText = textToProcess.toLowerCase();
     
@@ -166,20 +184,47 @@ export default function AppInterface() {
       if (mapInstance) mapInstance.flyTo([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])], 14, { duration: 1.5 });
       automatedResponse = { role: 'assistant', text: `[System]: Navigational coordinates confirmed. Targeting sector [${coordMatch[1]}, ${coordMatch[2]}].` };
     } else {
-      // 1. Efficient Local Interceptor for States (Zoom 7)
+      // 1. Efficient Local Interceptor with Fuzzy Matching
       let foundLocal = false;
-      for (const [location, coords] of Object.entries(INDIAN_STATES)) {
+      const words = lowerText.split(/\s+/);
+      
+      for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
+        const locWords = location.split(/\s+/);
+        let isMatch = false;
+        
+        // Exact Substring Match
         if (lowerText === location || lowerText.startsWith(location + " ") || lowerText.endsWith(" " + location) || lowerText.includes(" " + location + " ")) {
-          if (mapInstance) mapInstance.flyTo(coords, 7, { duration: 2.0 });
+          isMatch = true;
+        } else {
+          // Fuzzy Match (Levenshtein Distance)
+          // We extract n-grams from the user's text matching the word length of the location
+          for (let i = 0; i <= words.length - locWords.length; i++) {
+            const ngram = words.slice(i, i + locWords.length).join(" ");
+            // Only allow 1 or 2 typos depending on word length to prevent false positives
+            const maxTypos = location.length > 8 ? 2 : 1; 
+            if (levenshtein(ngram, location) <= maxTypos) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
+
+        if (isMatch) {
+          const lat = dataArr[0];
+          const lon = dataArr[1];
+          const zoomLvl = dataArr[2];
+          const locType = dataArr[3];
+          
+          if (mapInstance) mapInstance.flyTo([lat, lon], zoomLvl, { duration: 2.0 });
           const formattedLoc = location.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          automatedResponse = { role: 'assistant', text: `[System]: State entity identified. Navigating map to ${formattedLoc} at coordinates [${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}].` };
+          automatedResponse = { role: 'assistant', text: `[System]: ${locType} entity identified (Fuzzy Match). Navigating map to ${formattedLoc} at coordinates [${lat.toFixed(4)}, ${lon.toFixed(4)}].` };
           foundLocal = true;
           break; // Stop after first match
         }
       }
 
-      // 2. Dynamic Fallback Interceptor for any Indian City (Zoom 12)
-      if (!foundLocal && textToProcess.length < 50) { // Only geocode short queries to prevent geocoding long conversational prompts
+      // 2. Dynamic Fallback Interceptor for any Indian City
+      if (!foundLocal && textToProcess.length < 50) {
         try {
           const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(textToProcess)}&format=json&limit=1&countrycodes=in`);
           const nomData = await nomRes.json();
@@ -188,7 +233,6 @@ export default function AppInterface() {
             const lat = parseFloat(place.lat);
             const lon = parseFloat(place.lon);
             
-            // Differentiated Zoom: States get 7, Cities get 12, Specific buildings get 15
             let zoomLvl = 12;
             if (place.type === 'administrative' || place.type === 'state') zoomLvl = 7;
             if (place.class === 'amenity' || place.class === 'building') zoomLvl = 15;
@@ -499,6 +543,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
