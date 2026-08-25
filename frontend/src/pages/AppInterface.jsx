@@ -118,7 +118,7 @@ export default function AppInterface() {
       if (currentT1) formData.append('imageT1', currentT1);
       if (currentT2) formData.append('imageT2', currentT2);
 
-      const res = await fetch(${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/chat, {
+      const res = await fetch(import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + '/api/chat' : 'http://127.0.0.1:8000/api/chat', {
         method: 'POST',
         body: formData,
       });
