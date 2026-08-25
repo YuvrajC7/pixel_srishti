@@ -328,15 +328,18 @@ export default function AppInterface() {
 
       <div className="flex-1 relative flex overflow-hidden">
         
-                              <style>{`
+                                            <style>{`
           /* Dark mode for Leaflet and Geoman Toolbars */
           .leaflet-bar { border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5) !important; }
-          .leaflet-bar a { background-color: rgba(2,4,10,0.85) !important; color: #3b82f6 !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; backdrop-filter: blur(12px); width: 36px !important; height: 36px !important; line-height: 36px !important; }
-          .leaflet-bar a:hover { background-color: rgba(255,255,255,0.1) !important; color: #60a5fa !important; }
-          /* Blue filter for background SVG icons in Geoman */
-          .leaflet-pm-icon { filter: invert(48%) sepia(94%) saturate(3195%) hue-rotate(205deg) brightness(98%) contrast(96%) !important; }
+          .leaflet-bar a { background-color: rgba(2,4,10,0.85) !important; color: #60a5fa !important; border-bottom: 1px solid rgba(255,255,255,0.05) !important; backdrop-filter: blur(12px); width: 36px !important; height: 36px !important; line-height: 36px !important; }
+          .leaflet-bar a:hover { background-color: rgba(255,255,255,0.1) !important; color: #93c5fd !important; }
+          
+          /* CRITICAL FIX: Convert #5B5B5B grey icons to pure black first, then apply the precise color matrix for #60a5fa (blue-400) */
+          .leaflet-pm-icon, .control-icon, .leaflet-control-layers-toggle { 
+            filter: brightness(0) saturate(100%) invert(67%) sepia(51%) saturate(1510%) hue-rotate(185deg) brightness(101%) contrast(97%) !important; 
+          }
+          
           .leaflet-control-layers { background-color: rgba(2,4,10,0.85) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; backdrop-filter: blur(12px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5) !important; }
-          .leaflet-control-layers-toggle { filter: invert(48%) sepia(94%) saturate(3195%) hue-rotate(205deg) brightness(98%) contrast(96%) !important; }
           .leaflet-control-layers-expanded { padding: 10px !important; background-color: rgba(2,4,10,0.95) !important; }
         `}</style>
         {/* HERO SATELLITE MAP */}
@@ -543,6 +546,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
