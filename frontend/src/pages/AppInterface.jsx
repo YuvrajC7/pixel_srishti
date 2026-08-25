@@ -15,7 +15,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const GeomanInit = () => {
+const GeomanInit = ({ setInput }) => {
   const map = useMap();
   useEffect(() => {
     map.pm.addControls({
@@ -24,9 +24,27 @@ const GeomanInit = () => {
       drawText: false,
       cutPolygon: false,
     });
-    // Optional: Add translation/customization to make it feel like Bhuvan
     map.pm.setLang('en');
-  }, [map]);
+    
+    // Listen for drawn items (like markers)
+    map.on('pm:create', (e) => {
+      if (e.shape === 'Marker') {
+        const coord = e.layer.getLatLng();
+        const lat = coord.lat.toFixed(5);
+        const lng = coord.lng.toFixed(5);
+        
+        // Append to chat input
+        setInput(prev => prev + (prev.trim() ? ' ' : '') + `${lat}, ${lng}`);
+        
+        // Zoom in to the marker
+        map.flyTo([coord.lat, coord.lng], map.getZoom() > 12 ? map.getZoom() : 14, { duration: 1.5 });
+      }
+    });
+    
+    return () => {
+      map.off('pm:create');
+    };
+  }, [map, setInput]);
   return null;
 };
 
@@ -41,37 +59,17 @@ const MapController = ({ center }) => {
   return null;
 };
 
-// Component to handle map events (hover, click) for Pin Mode
-const MapEventsHandler = ({ isPinMode, setHoverCoord, handleMapClick }) => {
-  const map = useMap();
-  
+const CoordinateTracker = () => {
+  const [hoverCoord, setHoverCoord] = useState(null);
   useMapEvents({
-    mousemove(e) {
-      if (isPinMode) {
-        setHoverCoord([e.latlng.lat, e.latlng.lng]);
-      }
-    },
-    click(e) {
-      if (isPinMode) {
-        handleMapClick([e.latlng.lat, e.latlng.lng]);
-      }
-    },
-    mouseout() {
-      if (isPinMode) setHoverCoord(null);
-    }
+    mousemove(e) { setHoverCoord([e.latlng.lat, e.latlng.lng]); },
+    mouseout() { setHoverCoord(null); }
   });
-  
-  // Also change cursor when in pin mode
-  useEffect(() => {
-    if (isPinMode) {
-      map.getContainer().style.cursor = 'crosshair';
-    } else {
-      map.getContainer().style.cursor = '';
-      setHoverCoord(null);
-    }
-  }, [isPinMode, map, setHoverCoord]);
-
-  return null;
+  return (
+    <div className={`bg-[#02040A]/80 backdrop-blur-md border border-white/10 text-white text-xs px-3 py-2 rounded-lg font-mono tracking-widest shadow-lg transition-opacity duration-200 absolute right-[60px] top-1/2 -translate-y-1/2 whitespace-nowrap ${hoverCoord ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {hoverCoord ? `${hoverCoord[0].toFixed(5)}, ${hoverCoord[1].toFixed(5)}` : '0.00000, 0.00000'}
+    </div>
+  );
 };
 
 // Component to expose zoom controls
@@ -239,43 +237,23 @@ export default function AppInterface() {
                   />
                 </LayersControl.BaseLayer>
               </LayersControl>
-              <GeomanInit />
+              <GeomanInit setInput={setInput} />
               <MapController center={targetCoord} />
-              <MapEventsHandler isPinMode={isPinMode} setHoverCoord={setHoverCoord} handleMapClick={handleMapClick} />
+              
+              <CoordinateTracker />
               <ZoomControls setMapInstance={setMapInstance} />
               
-              {targetCoord && (
-                <Marker position={targetCoord}>
-                  <Popup className="text-black font-sans font-medium">Target Sector Acquired.</Popup>
-                </Marker>
-              )}
+              
            </MapContainer>
         </div>
         
         {/* MAP TOOLS FLOATING WIDGET (Bottom Right when chat is open, or dynamic) */}
         <div className={`absolute bottom-6 z-10 flex flex-col gap-3 transition-all duration-500 ease-in-out ${chatOpen ? 'right-[474px]' : 'right-6'}`}>
-           {/* Coordinates Hover Display */}
-           <div className={`bg-[#02040A]/80 backdrop-blur-md border border-white/10 text-white text-xs px-3 py-2 rounded-lg font-mono tracking-widest shadow-lg transition-opacity duration-200 absolute right-[60px] top-1/2 -translate-y-1/2 whitespace-nowrap ${isPinMode && hoverCoord ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {hoverCoord ? `${hoverCoord[0].toFixed(5)}, ${hoverCoord[1].toFixed(5)}` : '0.00000, 0.00000'}
-           </div>
+           
 
-           {targetCoord && (
-             <button 
-               onClick={() => setTargetCoord(null)}
-               className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg border backdrop-blur-md bg-red-600/80 border-red-500 text-white hover:bg-red-500 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-               title="Clear Pin"
-             >
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-             </button>
-           )}
+           
 
-           <button 
-             onClick={() => setIsPinMode(!isPinMode)}
-             className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg border backdrop-blur-md transition-all ${isPinMode ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]' : 'bg-[#02040A]/80 border-white/10 text-slate-300 hover:bg-white/10'}`}
-             title="Pin Location"
-           >
-             <Crosshair size={20} />
-           </button>
+           
            
            <div className="flex flex-col bg-[#02040A]/80 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden shadow-lg">
              <button 
@@ -431,6 +409,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
