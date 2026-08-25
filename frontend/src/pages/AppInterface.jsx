@@ -154,25 +154,36 @@ export default function AppInterface() {
     const textToProcess = (typeof overrideInput === 'string' ? overrideInput : input);
     if (!textToProcess.trim() && !fileT1 && !fileT2) return;
 
-    // Efficient Local Geocoding Interceptor
-    const lowerText = textToProcess.toLowerCase();
-    for (const [location, coords] of Object.entries(INDIAN_STATES)) {
-      if (lowerText.includes(location)) {
-        if (mapInstance) {
-          mapInstance.flyTo(coords, 7, { duration: 2.0 });
-        }
-        break; // Stop after first match
-      }
-    }
-
     const userMessage = { role: 'user', text: textToProcess, hasFile: !!fileT1 || !!fileT2 };
-    setMessages(prev => [...prev, userMessage]);
+    
+    // Check if we need an automated geocoding response
+    let automatedResponse = null;
+    const lowerText = textToProcess.toLowerCase();
     
     // Quick hack to detect if user typed coordinates
     const coordMatch = textToProcess.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
-    if (coordMatch && mapInstance) {
-        mapInstance.flyTo([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])], 14, { duration: 1.5 });
+    if (coordMatch) {
+      if (mapInstance) mapInstance.flyTo([parseFloat(coordMatch[1]), parseFloat(coordMatch[2])], 14, { duration: 1.5 });
+      automatedResponse = { role: 'assistant', text: `[System]: Navigational coordinates confirmed. Targeting sector [${coordMatch[1]}, ${coordMatch[2]}].` };
+    } else {
+      // Efficient Local Geocoding Interceptor
+      for (const [location, coords] of Object.entries(INDIAN_STATES)) {
+        if (lowerText.includes(location)) {
+          if (mapInstance) {
+            mapInstance.flyTo(coords, 7, { duration: 2.0 });
+          }
+          const formattedLoc = location.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          automatedResponse = { role: 'assistant', text: `[System]: Geospatial entity identified. Navigating map to ${formattedLoc} at coordinates [${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}].` };
+          break; // Stop after first match
+        }
+      }
     }
+
+    setMessages(prev => {
+      const newMsgs = [...prev, userMessage];
+      if (automatedResponse) newMsgs.push(automatedResponse);
+      return newMsgs;
+    });
 
     const currentMode = mode;
     const currentT1 = fileT1;
@@ -183,7 +194,7 @@ export default function AppInterface() {
 
     try {
       const formData = new FormData();
-      formData.append('message', currentInput || 'Execute analysis');
+      formData.append('message', textToProcess || 'Execute analysis');
       formData.append('inputMode', currentMode);
       formData.append('isBenchmark', 'false');
       
@@ -454,6 +465,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
