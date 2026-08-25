@@ -110,26 +110,60 @@ export default function AppInterface() {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('message', currentInput || 'Execute analysis');
-      formData.append('inputMode', currentMode);
-      formData.append('isBenchmark', 'false');
-      
-      if (currentT1) formData.append('imageT1', currentT1);
-      if (currentT2) formData.append('imageT2', currentT2);
+      let endpoint = '';
+      let replyText = '';
+      let meta = null;
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-      const res = await fetch(import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL + '/api/chat' : 'http://127.0.0.1:8000/api/chat', {
-        method: 'POST',
-        body: formData,
-      });
+      if (currentMode === 'BI_TEMPORAL') {
+          if (!currentT1 || !currentT2) {
+              setMessages(prev => [...prev, { role: 'assistant', text: 'Error: Both Image T1 (Past) and Image T2 (Current) are required for Bi-Temporal Change Detection.' }]);
+              setLoading(false);
+              return;
+          }
+          endpoint = '/api/detect_change';
+          const formData = new FormData();
+          formData.append('image1', currentT1);
+          formData.append('image2', currentT2);
+          const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
+          if (!res.ok) throw new Error('Network response was not ok');
+          const data = await res.json();
+          replyText = `[Change Detection Specialist]:\n${data.result}`;
+      } 
+      else if (currentMode === 'SINGLE_IMAGE') {
+          if (!currentT1) {
+              setMessages(prev => [...prev, { role: 'assistant', text: 'Error: An image is required for Single Image mode.' }]);
+              setLoading(false);
+              return;
+          }
+          if (currentInput.toLowerCase().includes('segment')) {
+              endpoint = '/api/segment';
+              const formData = new FormData();
+              formData.append('image', currentT1);
+              const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
+              if (!res.ok) throw new Error('Network response was not ok');
+              const data = await res.json();
+              replyText = `[Segmentation Specialist]:\n${data.description}`;
+              meta = { mask_path: data.mask_path };
+          } else {
+              endpoint = '/api/ask_question';
+              const formData = new FormData();
+              formData.append('image', currentT1);
+              formData.append('question', currentInput || 'Describe this image in detail.');
+              const res = await fetch(baseUrl + endpoint, { method: 'POST', body: formData });
+              if (!res.ok) throw new Error('Network response was not ok');
+              const data = await res.json();
+              replyText = `[VQA Specialist]:\n${data.answer}`;
+          }
+      }
+      else {
+          replyText = `[Agentic Orchestrator]: Received query: '${currentInput}'. Mode ${currentMode} is currently pending integration with the ML backend.`;
+      }
 
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      
-      setMessages(prev => [...prev, { role: 'assistant', text: data.reply, metadata: data.metadata }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: replyText, metadata: meta }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'assistant', text: 'Error connecting to the orchestration backend.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: 'Error connecting to the orchestration backend. Check if the ML server is running or if the VITE_API_URL is correct.' }]);
     } finally {
       setLoading(false);
     }
