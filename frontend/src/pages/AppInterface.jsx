@@ -336,7 +336,7 @@ export default function AppInterface() {
           
           /* CRITICAL FIX: Convert #5B5B5B grey icons to pure black first, then apply the precise color matrix for #60a5fa (blue-400) */
           .leaflet-pm-icon, .control-icon, .leaflet-control-layers-toggle { 
-            filter: brightness(0) saturate(100%) invert(67%) sepia(51%) saturate(1510%) hue-rotate(185deg) brightness(101%) contrast(97%) !important; 
+            filter: brightness(0) saturate(100%) invert(59%) sepia(85%) saturate(3015%) hue-rotate(193deg) brightness(101%) contrast(97%) !important; 
           }
           
           .leaflet-control-layers { background-color: rgba(2,4,10,0.85) !important; color: #cbd5e1 !important; border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 10px !important; backdrop-filter: blur(12px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5) !important; }
@@ -546,6 +546,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
