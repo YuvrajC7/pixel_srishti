@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, UploadCloud, Map as MapIcon, MessageSquare, Loader, Image as ImageIcon, Layers, Activity, ChevronRight, ChevronLeft, Plus, Minus, Crosshair, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 
 // Fix for default marker icons in React-Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -12,6 +14,21 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+const GeomanInit = () => {
+  const map = useMap();
+  useEffect(() => {
+    map.pm.addControls({
+      position: 'topleft',
+      drawCircleMarker: false,
+      drawText: false,
+      cutPolygon: false,
+    });
+    // Optional: Add translation/customization to make it feel like Bhuvan
+    map.pm.setLang('en');
+  }, [map]);
+  return null;
+};
 
 // Component to dynamically fly to coordinates if user provides them
 const MapController = ({ center }) => {
@@ -72,6 +89,28 @@ export default function AppInterface() {
     { role: 'assistant', text: 'Welcome to PIXEL Srishti Orbital Interface.\nSelect your analysis mode and upload geospatial telemetry.' }
   ]);
   const [input, setInput] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+
+  const startVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert("Voice search is not supported in this browser. Try Chrome.");
+      return;
+    }
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-IN'; // Indian English, Bhuvan style
+    
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+    };
+    recognition.onerror = (e) => console.error("Speech recognition error", e);
+    recognition.onend = () => setIsRecording(false);
+    
+    recognition.start();
+  };
   
   const [mode, setMode] = useState('SINGLE_IMAGE');
   const [fileT1, setFileT1] = useState(null);
@@ -170,10 +209,27 @@ export default function AppInterface() {
         {/* HERO SATELLITE MAP */}
         <div className="absolute inset-0 z-0">
            <MapContainer center={[20.5937, 78.9629]} zoom={5} className="h-full w-full" zoomControl={false}>
-              <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="&copy; Esri"
-              />
+                            <LayersControl position="bottomleft">
+                <LayersControl.BaseLayer checked name="Satellite (Esri Imagery)">
+                  <TileLayer
+                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    attribution="&copy; Esri"
+                  />
+                </LayersControl.BaseLayer>
+                <LayersControl.BaseLayer name="Terrain (Bhuvan Style)">
+                  <TileLayer
+                    url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+                    attribution="Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)"
+                  />
+                </LayersControl.BaseLayer>
+                <LayersControl.BaseLayer name="Streets (OpenStreetMap)">
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="&copy; OpenStreetMap contributors"
+                  />
+                </LayersControl.BaseLayer>
+              </LayersControl>
+              <GeomanInit />
               <MapController center={targetCoord} />
               <MapEventsHandler isPinMode={isPinMode} setHoverCoord={setHoverCoord} handleMapClick={handleMapClick} />
               <ZoomControls setMapInstance={setMapInstance} />
@@ -343,21 +399,14 @@ export default function AppInterface() {
 
           <div className="p-5 bg-black/40 border-t border-white/10">
             <div className="flex gap-3 items-end">
-              <div className="flex-1 bg-[#02040A] border border-white/10 rounded-2xl p-1.5 pl-4 flex items-center gap-2 focus-within:border-blue-500/50 transition-colors shadow-inner">
-                <textarea
-                  className="flex-1 bg-transparent border-none outline-none text-sm text-slate-100 placeholder:text-slate-500 resize-none max-h-32 py-2.5"
-                  rows="1"
-                  placeholder="Type coordinates or ask query..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-              </div>
+              
+              <button 
+                onClick={startVoiceSearch}
+                className={`w-12 h-12 shrink-0 ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-white/10 hover:bg-white/20'} text-white rounded-xl flex items-center justify-center shadow-lg transition-all`}
+                title="Voice Search (Bhuvan NLP)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+              </button>
               <button 
                 onClick={handleSend}
                 disabled={loading || (!input.trim() && !fileT1 && !fileT2)}
@@ -372,4 +421,5 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
