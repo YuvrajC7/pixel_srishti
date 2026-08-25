@@ -22,7 +22,7 @@ class SiameseUNet(nn.Module):
             encoder_channels=self.encoder.out_channels,
             decoder_channels=(256, 128, 64, 32, 16),
             n_blocks=5,
-            use_batchnorm=True,
+            
             center=False,
             attention_type=None
         )
