@@ -215,7 +215,7 @@ export default function AppInterface() {
       }
       const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'assistant', text: data.reply || data.answer, metadata: data.metadata }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: data.agent_response || data.reply || data.answer, metadata: data.metadata }]);
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'assistant', text: 'API Error: ' + error.message }]);
@@ -467,6 +467,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
