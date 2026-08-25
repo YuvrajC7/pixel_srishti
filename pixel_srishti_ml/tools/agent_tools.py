@@ -198,3 +198,53 @@ def tool_segment_image(img_path, checkpoint_path="checkpoints/latest_seg_model.p
     
     return nl_answer, output_mask_path
 
+
+def tool_detect_objects(img_path, query_prompt):
+    """
+    Tool for zero-shot object detection using Grounding DINO.
+    Finds bounding boxes for specific items (e.g. 'houses', 'tractors', 'ponds').
+    """
+    print(f"[Agent Tool] Running Grounding DINO for '{query_prompt}'...")
+    from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model_id = "IDEA-Research/grounding-dino-base"
+    
+    # 1. Load Model
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
+    model.eval()
+    
+    # 2. Prepare Image and Text
+    image = Image.open(img_path).convert("RGB")
+    query_prompt = query_prompt.lower()
+    if not query_prompt.endswith("."):
+        query_prompt += "."
+        
+    inputs = processor(images=image, text=query_prompt, return_tensors="pt").to(device)
+    
+    # 3. Inference
+    with torch.no_grad():
+        outputs = model(**inputs)
+        
+    target_sizes = torch.tensor([image.size[::-1]])
+    results = processor.image_processor.post_process_object_detection(
+        outputs, 
+        threshold=0.3, 
+        target_sizes=target_sizes
+    )[0]
+    
+    boxes = results["boxes"].cpu().numpy().tolist()
+    scores = results["scores"].cpu().numpy().tolist()
+    
+    # 4. Generate Answer
+    count = len(scores)
+    nl_answer = f"Found {count} instances of '{query_prompt}' in the image."
+    
+    # VRAM SAVING HACK
+    del model
+    del processor
+    torch.cuda.empty_cache()
+    
+    return {"count": count, "boxes": boxes, "scores": scores, "description": nl_answer}
+

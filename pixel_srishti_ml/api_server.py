@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # Import our VRAM-optimized Agent Tools
-from tools.agent_tools import tool_detect_change, tool_answer_vqa, tool_segment_image
+from tools.agent_tools import tool_detect_change, tool_answer_vqa, tool_segment_image, tool_detect_objects
 
 app = FastAPI(
     title="Jaldrishti ML Backend", 
@@ -85,6 +85,27 @@ async def api_segment(
         result_text, mask_path = tool_segment_image(path)
         
         return {"status": "success", "description": result_text, "mask_path": mask_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/detect_objects")
+async def api_detect_objects(
+    image: UploadFile = File(...),
+    query: str = Form(...)
+):
+    """
+    Endpoint for Zero-Shot Object Detection using Grounding DINO.
+    Pass a query like 'houses' or 'water pump' to get bounding boxes.
+    """
+    try:
+        path = os.path.join(TEMP_DIR, image.filename)
+        with open(path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+            
+        # Run Object Detection Tool (Loads Grounding DINO, infers, clears VRAM)
+        result = tool_detect_objects(path, query)
+        
+        return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
