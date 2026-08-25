@@ -6,6 +6,7 @@ import uvicorn
 
 # Import our VRAM-optimized Agent Tools
 from tools.agent_tools import tool_detect_change, tool_answer_vqa, tool_segment_image, tool_detect_objects
+from tools.orchestrator_main import run_smart_agent
 
 app = FastAPI(
     title="Jaldrishti ML Backend", 
@@ -106,6 +107,33 @@ async def api_detect_objects(
         result = tool_detect_objects(path, query)
         
         return {"status": "success", "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+from typing import List
+
+@app.post("/api/chat")
+async def api_chat(
+    query: str = Form(...),
+    images: List[UploadFile] = File(default=[])
+):
+    """
+    Master Agentic Endpoint. 
+    Frontend just sends the user's natural language query and any uploaded images.
+    The Backend Orchestrator automatically handles tool routing, fallback, and synthesis.
+    """
+    try:
+        saved_paths = []
+        for img in images:
+            path = os.path.join(TEMP_DIR, img.filename)
+            with open(path, "wb") as buffer:
+                shutil.copyfileobj(img.file, buffer)
+            saved_paths.append(path)
+            
+        # Run Master Wrapper (Groq -> Fallback to Offline)
+        final_answer = run_smart_agent(query, saved_paths)
+        
+        return {"status": "success", "agent_response": final_answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
