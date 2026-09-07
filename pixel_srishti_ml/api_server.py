@@ -3,6 +3,8 @@ import shutil
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from fastapi.staticfiles import StaticFiles
+
 
 # Import our VRAM-optimized Agent Tools
 from tools.agent_tools import tool_detect_change, tool_answer_vqa, tool_segment_image, tool_detect_objects
@@ -25,6 +27,7 @@ app.add_middleware(
 
 TEMP_DIR = "temp_uploads"
 os.makedirs(TEMP_DIR, exist_ok=True)
+app.mount("/outputs", StaticFiles(directory="."), name="outputs")
 
 @app.post("/api/detect_change")
 async def api_detect_change(
@@ -144,3 +147,4 @@ async def health_check():
 if __name__ == "__main__":
     print("Starting Jaldrishti ML Backend on http://localhost:8000...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
