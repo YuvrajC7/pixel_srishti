@@ -61,3 +61,65 @@ cd pixel_srishti/pixel_srishti_ml
 
 # Install dependencies
 pip install -r requirements.txt
+
+**Download the Weights:** 
+Run the following commands to automatically download our custom-trained weights from our **[Hugging Face Repository](https://huggingface.co/27Kushal/PIXEL-Srishti-Segmentation)** directly into your `checkpoints/` folder:
+
+```bash
+mkdir -p checkpoints
+wget https://huggingface.co/27Kushal/PIXEL-Srishti-Segmentation/resolve/main/latest_seg_model.pth -O checkpoints/latest_seg_model.pth
+wget https://huggingface.co/27Kushal/PIXEL-Srishti-Segmentation/resolve/main/latest_cd_model.pth -O checkpoints/latest_cd_model.pth
+```
+
+**Start the Server:**
+```bash
+# Export your Groq API key for the primary orchestrator
+export GROQ_API_KEY="your-api-key-here"
+
+# Start FastAPI
+python api_server.py
+```
+*The ML backend will now be running on `http://localhost:8000`.*
+
+> **To test offline mode:** Run `export SIMULATE_GROQ_FAILURE=true` before starting the server to force the offline BART-MNLI fallback router.
+
+### 2. Frontend (Interactive Web GUI)
+```bash
+# Open a new terminal and navigate to the frontend folder
+cd pixel_srishti/frontend
+
+# Install dependencies and run
+npm install
+npm run dev
+```
+*The web interface will be accessible at `http://localhost:3000`.*
+
+---
+
+## 🔌 API Reference
+
+The entire AI pipeline is exposed via a single, intelligent endpoint for the frontend to consume.
+
+### `POST /api/chat`
+**Description:** The Agentic Orchestrator handles routing automatically. Just send text and images.
+* **Payload (FormData):**
+  * `query`: (String) e.g., "Map the land cover." or "What changed between these images?"
+  * `images`: (List[File]) 1 or 2 uploaded `.tiff` / `.jpg` files.
+* **Response:**
+  ```json
+  {
+      "status": "success",
+      "agent_response": "Segmentation Results: Semantic segmentation analysis complete... | Mask generated at: temp_uploads/frontend_segmentation_mask.png"
+  }
+  ```
+
+---
+
+## 🧪 Testing Models Independently
+To verify GPU compatibility without starting the API, run our interactive test script:
+```bash
+python test_playground.py
+```
+
+## 📄 License
+This project is licensed under the **MIT License**.
