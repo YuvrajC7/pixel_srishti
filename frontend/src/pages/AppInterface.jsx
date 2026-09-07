@@ -511,9 +511,9 @@ for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
            </div>
         </div>
 
-                  {/* OVERLAY OPACITY SLIDER (Only visible when overlay exists) */}
+                            {/* OVERLAY OPACITY SLIDER (Only visible when overlay exists) */}
           {overlayImage && (
-            <div className={bsolute top-20 z-30 bg-[#02040A]/90 p-3 rounded-l-xl border border-blue-500/30 backdrop-blur-md transition-all duration-500 }>
+            <div className={`absolute top-20 z-30 bg-[#02040A]/90 p-3 rounded-l-xl border border-blue-500/30 backdrop-blur-md transition-all duration-500 ${chatOpen ? 'right-[450px]' : 'right-0'}`}>
               <div className="flex flex-col items-center gap-2">
                 <span className="text-[10px] uppercase text-blue-400 font-bold tracking-widest">Mask</span>
                 <input 
@@ -526,7 +526,8 @@ for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
               </div>
             </div>
           )}
-          {/* CHAT TOGGLE BUTTON */}
+          
+{/* CHAT TOGGLE BUTTON */}
         <button 
           onClick={() => setChatOpen(!chatOpen)}
           className={`absolute top-6 z-30 bg-[#02040A] hover:bg-white/10 text-blue-400 border border-blue-400/30 p-2.5 rounded-l-xl hover:text-blue-400 shadow-2xl backdrop-blur-md transition-all duration-500 ease-in-out flex items-center justify-center ${chatOpen ? 'right-[450px]' : 'right-0'}`}
@@ -609,6 +610,9 @@ for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
     </div>
   );
 }
+
+
+
 
 
 
