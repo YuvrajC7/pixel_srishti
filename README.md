@@ -61,6 +61,7 @@ cd pixel_srishti/pixel_srishti_ml
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
 **Download the Weights:** 
 Run the following commands to automatically download our custom-trained weights from our **[Hugging Face Repository](https://huggingface.co/27Kushal/PIXEL-Srishti-Segmentation)** directly into your `checkpoints/` folder:
