@@ -197,7 +197,12 @@ export default function AppInterface() {
       const cleanText = lowerText.replace(/(show me|go to|zoom to|find|locate|take me to|navigate to|in|at)\b/g, '').trim();
       const words = cleanText.split(/\s+/);
       
-      for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
+      // Stop common conversational words from being searched on the map (like "hi", "hello")
+      const ignoreWords = ["hi", "hello", "hey", "test", "help", "what", "how", "why"];
+      if (ignoreWords.includes(cleanText)) {
+          foundLocal = true; // Pretend we handled it to skip Nominatim, but don't set a map flight!
+      } else {
+for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
         const locWords = location.split(/\s+/);
         let isMatch = false;
         let isFuzzy = false;
@@ -238,6 +243,8 @@ export default function AppInterface() {
           foundLocal = true;
           break; // Stop after first match
         }
+      }
+
       }
 
       // 2. Dynamic Fallback Interceptor for any Indian City
@@ -602,6 +609,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
