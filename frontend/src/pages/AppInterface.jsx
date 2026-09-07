@@ -327,7 +327,7 @@ for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
             setOverlayBounds(mapInstance.getBounds());
             
             // Optionally remove the line from chat or replace it with an image tag
-            finalReply = finalReply.replace(mapRegex, [Visualization applied to map overlay]);
+            finalReply = finalReply.replace(mapRegex, '[Visualization applied to map overlay]');
         }
         
         setMessages(prev => [...prev, { role: 'assistant', text: finalReply, metadata: data.metadata }]);
@@ -609,6 +609,7 @@ for (const [location, dataArr] of Object.entries(INDIAN_LOCATIONS)) {
     </div>
   );
 }
+
 
 
 
