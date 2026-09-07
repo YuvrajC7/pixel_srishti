@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, UploadCloud, Map as MapIcon, MessageSquare, Loader, Image as ImageIcon, Layers, Activity, ChevronRight, ChevronLeft, Plus, Minus, Crosshair, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, LayersControl } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, LayersControl, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
@@ -127,6 +127,9 @@ export default function AppInterface() {
   const [fileT2, setFileT2] = useState(null);
   const [loading, setLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
+    const [overlayImage, setOverlayImage] = useState(null);
+    const [overlayBounds, setOverlayBounds] = useState(null);
+    const [overlayOpacity, setOverlayOpacity] = useState(0.7);
   const [targetCoord, setTargetCoord] = useState(null);
   
   // New State for Map Tools
@@ -305,7 +308,22 @@ export default function AppInterface() {
       }
       const data = await res.json();
       
-      setMessages(prev => [...prev, { role: 'assistant', text: data.agent_response || data.reply || data.answer, metadata: data.metadata }]);
+              let finalReply = data.agent_response || data.reply || data.answer;
+        
+        // Parse for Generated Map
+        const mapRegex = /Generated Map:\s*(.*?)(?:\n|$)/;
+        const match = finalReply.match(mapRegex);
+        if (match && mapInstance) {
+            const filename = match[1].trim();
+            const imageUrl = baseUrl + '/outputs/' + filename + '?t=' + new Date().getTime();
+            setOverlayImage(imageUrl);
+            setOverlayBounds(mapInstance.getBounds());
+            
+            // Optionally remove the line from chat or replace it with an image tag
+            finalReply = finalReply.replace(mapRegex, [Visualization applied to map overlay]);
+        }
+        
+        setMessages(prev => [...prev, { role: 'assistant', text: finalReply, metadata: data.metadata }]);
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, { role: 'assistant', text: 'API Error: ' + error.message }]);
@@ -383,6 +401,15 @@ export default function AppInterface() {
               <MapController center={targetCoord} />
               
               <CoordinateTracker />
+                {/* DYNAMIC IMAGE OVERLAY (For Segmentation / Change Detection Masks) */}
+                {overlayImage && overlayBounds && (
+                  <ImageOverlay
+                    url={overlayImage}
+                    bounds={overlayBounds}
+                    opacity={overlayOpacity}
+                    zIndex={100}
+                  />
+                )}
               <ZoomControls setMapInstance={setMapInstance} />
               
               
@@ -477,7 +504,22 @@ export default function AppInterface() {
            </div>
         </div>
 
-        {/* CHAT TOGGLE BUTTON */}
+                  {/* OVERLAY OPACITY SLIDER (Only visible when overlay exists) */}
+          {overlayImage && (
+            <div className={bsolute top-20 z-30 bg-[#02040A]/90 p-3 rounded-l-xl border border-blue-500/30 backdrop-blur-md transition-all duration-500 }>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] uppercase text-blue-400 font-bold tracking-widest">Mask</span>
+                <input 
+                  type="range" 
+                  min="0" max="1" step="0.1" 
+                  value={overlayOpacity} 
+                  onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                  className="w-24 accent-blue-500 cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
+          {/* CHAT TOGGLE BUTTON */}
         <button 
           onClick={() => setChatOpen(!chatOpen)}
           className={`absolute top-6 z-30 bg-[#02040A] hover:bg-white/10 text-blue-400 border border-blue-400/30 p-2.5 rounded-l-xl hover:text-blue-400 shadow-2xl backdrop-blur-md transition-all duration-500 ease-in-out flex items-center justify-center ${chatOpen ? 'right-[450px]' : 'right-0'}`}
@@ -560,6 +602,7 @@ export default function AppInterface() {
     </div>
   );
 }
+
 
 
 
