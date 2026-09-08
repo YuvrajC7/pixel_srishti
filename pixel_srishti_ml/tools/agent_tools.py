@@ -1,33 +1,52 @@
 import os
 import torch
 import numpy as np
+import cv2
 from PIL import Image
 import torchvision.transforms as T
 
-# Import your successfully trained flagship model
+# Import your trained flagship Siamese architecture
 from models.siamese_unet import SiameseUNet
 
+def clean_mask_noise(mask_array, min_pixel_area=40):
+    """
+    Removes scattered salt-and-pepper noise so only real, 
+    cohesive structural changes are kept.
+    """
+    mask_uint8 = (mask_array * 255).astype(np.uint8)
+    
+    # 1. Morphological opening to eliminate tiny speckles
+    kernel = np.ones((3, 3), np.uint8)
+    opened = cv2.morphologyEx(mask_uint8, cv2.MORPH_OPEN, kernel)
+    
+    # 2. Filter out tiny connected blobs smaller than min_pixel_area
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(opened)
+    cleaned = np.zeros_like(opened)
+    for i in range(1, num_labels):
+        if stats[i, cv2.CC_STAT_AREA] >= min_pixel_area:
+            cleaned[labels == i] = 1
+            
+    return cleaned
+
 def generate_change_description(mask_array):
-    """Helper to convert a binary mask array into a plain English sentence."""
+    """Generates an informative, dynamic text summary based on cleaned pixels."""
     total_pixels = mask_array.size
     changed_pixels = np.sum(mask_array > 0)
     change_ratio = (changed_pixels / total_pixels) * 100
     
-    if change_ratio < 1.0:
-        return f"No significant changes detected in the specified area (change was only {change_ratio:.2f}%)."
-    elif change_ratio < 10.0:
-        return f"Minor changes detected, covering {change_ratio:.2f}% of the region. This may indicate initial watershed development works."
+    if change_ratio < 0.5:
+        return f"No significant structural change detected ({change_ratio:.2f}% variance, likely minor seasonal/lighting differences)."
+    elif change_ratio < 5.0:
+        return f"Localized structural change detected ({change_ratio:.2f}% of area). Detected localized ground excavation, path clearance, or small-scale civil work."
+    elif change_ratio < 15.0:
+        return f"Moderate terrain alteration detected ({change_ratio:.2f}% of area). Indicates land clearance, new road extension, or pond excavation."
     else:
-        return f"Major changes detected! {change_ratio:.2f}% of the region has been altered, indicating significant construction or water accumulation."
+        return f"Substantial geographic change detected! ({change_ratio:.2f}% of region altered). High likelihood of major civil works or water accumulation."
 
 def tool_detect_change(img_A_path, img_B_path, checkpoint_path="checkpoints/latest_cd_model.pth"):
     """
-    Tool for the LLM Agent to detect structural changes between two dates.
-    Loads the Siamese U-Net, runs inference, saves the visual mask, and clears VRAM.
-    
-    Returns:
-        nl_answer (str): Plain English text describing the change.
-        output_mask_path (str): Filepath to the generated mask image for the UI to display.
+    Tool for detecting structural changes between two satellite captures.
+    Loads Siamese U-Net, runs inference, cleans noise, saves transparent RGBA overlay, and clears VRAM.
     """
     print("[Agent Tool] Running Change Detection...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -38,11 +57,11 @@ def tool_detect_change(img_A_path, img_B_path, checkpoint_path="checkpoints/late
         checkpoint = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
-        print("[Warning] No checkpoint found! Did you copy the checkpoint from Kaggle?")
+        print(f"[Warning] Checkpoint '{checkpoint_path}' not found! Using initialized weights.")
     
     model.eval()
 
-    # 2. Prepare Images
+    # 2. Transform Images
     transform = T.Compose([
         T.Resize((512, 512)),
         T.ToTensor(),
@@ -53,82 +72,44 @@ def tool_detect_change(img_A_path, img_B_path, checkpoint_path="checkpoints/late
     img_B = Image.open(img_B_path).convert('RGB')
     orig_size = img_A.size 
     
-    if os.path.exists(checkpoint_path):
-        t_A = transform(img_A).unsqueeze(0).to(device)
-        t_B = transform(img_B).unsqueeze(0).to(device)
-        with torch.no_grad():
-            output = model(t_A, t_B)
-            mask = (torch.sigmoid(output) > 0.5).cpu().numpy().squeeze()
-    else:
-        # HACK: CV Heuristic fallback for demo if PyTorch checkpoint is missing
-        img_A_cv = np.array(img_A.resize((512, 512))).astype(np.float32)
-        img_B_cv = np.array(img_B.resize((512, 512))).astype(np.float32)
-        diff = np.abs(img_B_cv - img_A_cv)
-        diff_sum = np.sum(diff, axis=-1)
-        mask = diff_sum > 80 # threshold
+    t_A = transform(img_A).unsqueeze(0).to(device)
+    t_B = transform(img_B).unsqueeze(0).to(device)
 
-    # 4. Generate Text Answer for the Agent
-    nl_answer = generate_change_description(mask)
+    # 3. Inference
+    with torch.no_grad():
+        output = model(t_A, t_B)
+        raw_mask = (torch.sigmoid(output) > 0.5).cpu().numpy().squeeze()
 
-    # 5. Save the visual mask for the Frontend UI
-    mask_img = Image.fromarray((mask * 255).astype(np.uint8))
+    # 4. Clean up noise speckles
+    cleaned_mask = clean_mask_noise(raw_mask, min_pixel_area=40)
+
+    # 5. Generate Natural Language Text
+    nl_answer = generate_change_description(cleaned_mask)
+
+    # 6. Save as TRANSPARENT RGBA mask (fixes the solid black box overlay!)
+    h, w = cleaned_mask.shape
+    rgba_mask = np.zeros((h, w, 4), dtype=np.uint8)
+    
+    # Changed pixels: Semi-transparent glowing red (R=255, G=35, B=35, Alpha=190)
+    rgba_mask[cleaned_mask > 0] = [255, 35, 35, 190]
+    # Unchanged pixels remain [0, 0, 0, 0] (100% transparent so map is visible)
+
+    mask_img = Image.fromarray(rgba_mask, mode="RGBA")
     mask_img = mask_img.resize(orig_size, Image.NEAREST)
     output_mask_path = "frontend_output_mask.png"
     mask_img.save(output_mask_path)
 
-    # 6. VRAM SAVING HACK: Delete model and clear GPU memory so LangGraph doesn't crash
+    # 7. VRAM SAVING HACK
     del model
     torch.cuda.empty_cache()
 
     return nl_answer, output_mask_path
 
 
-def tool_answer_vqa(img_path, question):
-    """
-    Tool for the LLM Agent to ask natural language questions about a single satellite image.
-    Loads the 8-bit BLIP-2 model, gets the answer, and clears VRAM.
-    
-    Returns:
-        answer (str): The VLM's text response.
-    """
-    print(f"[Agent Tool] Asking VLM: '{question}'")
-    from transformers import AutoProcessor, Blip2ForConditionalGeneration, BitsAndBytesConfig
-    
-    # 1. Load 8-bit Model safely
-    quant_config = BitsAndBytesConfig(load_in_8bit=True)
-    processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
-    model = Blip2ForConditionalGeneration.from_pretrained(
-        "Salesforce/blip2-opt-2.7b", 
-        quantization_config=quant_config, 
-        device_map="auto"
-    )
-    
-    # 2. Process Image and Question
-    image = Image.open(img_path).convert('RGB')
-    prompt = f"Question: {question} Answer:"
-    
-    inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
-    inputs["pixel_values"] = inputs["pixel_values"].to(torch.float16)
-    
-    # 3. Inference
-    generated_ids = model.generate(**inputs, max_new_tokens=30)
-    answer = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
-    
-    # Clean up the weird prompt echoing
-    if "Answer:" in answer:
-        answer = answer.split("Answer:")[-1].strip()
-
-    # 4. VRAM SAVING HACK: Delete model and clear GPU memory
-    del model
-    del processor
-    torch.cuda.empty_cache()
-    
-    return answer
-
 def tool_segment_image(img_path, checkpoint_path="checkpoints/latest_seg_model.pth"):
     """
-    Tool for segmenting land cover (Water, Buildings, Woodlands) in a single satellite image.
-    Uses DeepLabV3+ with ResNet34 backbone, infers, saves colored mask, and clears VRAM.
+    Tool for segmenting land cover (Water, Buildings, Woodlands, Roads).
+    Uses DeepLabV3+ with ResNet34 backbone, infers, saves transparent RGBA colored mask, and clears VRAM.
     """
     print("[Agent Tool] Running DeepLabV3+ Segmentation...")
     import segmentation_models_pytorch as smp
@@ -147,7 +128,7 @@ def tool_segment_image(img_path, checkpoint_path="checkpoints/latest_seg_model.p
         checkpoint = torch.load(checkpoint_path, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
-        print("[Warning] No DeepLabV3+ checkpoint found! Did you copy latest_seg_model.pth from Kaggle?")
+        print(f"[Warning] DeepLabV3+ checkpoint '{checkpoint_path}' not found! Using initialized weights.")
         
     model.eval()
     
@@ -182,18 +163,23 @@ def tool_segment_image(img_path, checkpoint_path="checkpoints/latest_seg_model.p
         f"- Roads/Trails: {pct_roads:.2f}%"
     )
     
-    # Map predictions to colors for the UI display
-    # 0: Background (Black), 1: Buildings (Red), 2: Woodlands (Green), 3: Water (Blue), 4: Roads (Gray)
-    color_map = np.array([
-        [0, 0, 0],
-        [255, 0, 0],
-        [0, 255, 0],
-        [0, 0, 255],
-        [128, 128, 128]
-    ])
-    colored_mask = color_map[pred_mask]
+    # Transparent RGBA color map:
+    # 0: Background -> 100% transparent [0, 0, 0, 0]
+    # 1: Buildings  -> Bright Red with opacity [239, 68, 68, 180]
+    # 2: Woodlands  -> Forest Green with opacity [34, 197, 94, 180]
+    # 3: Water      -> Blue with opacity [59, 130, 246, 190]
+    # 4: Roads      -> Light Gray with opacity [203, 213, 225, 180]
+    color_map_rgba = np.array([
+        [0, 0, 0, 0],
+        [239, 68, 68, 180],
+        [34, 197, 94, 180],
+        [59, 130, 246, 190],
+        [203, 213, 225, 180]
+    ], dtype=np.uint8)
     
-    mask_img = Image.fromarray(colored_mask.astype(np.uint8))
+    colored_mask = color_map_rgba[pred_mask]
+    
+    mask_img = Image.fromarray(colored_mask, mode="RGBA")
     mask_img = mask_img.resize(orig_size, Image.NEAREST)
     output_mask_path = "frontend_segmentation_mask.png"
     mask_img.save(output_mask_path)
@@ -255,3 +241,50 @@ def tool_detect_objects(img_path, query_prompt):
     return {"count": count, "boxes": boxes, "scores": scores, "description": nl_answer}
 
 
+def tool_answer_vqa(img_path, question):
+    """
+    Tool for the LLM Agent to ask natural language questions about a single satellite image.
+    Loads the 8-bit BLIP-2 model, gets the answer, and clears VRAM.
+    """
+    print(f"[Agent Tool] Asking VLM: '{question}'")
+    from transformers import AutoProcessor, Blip2ForConditionalGeneration
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # Load 8-bit Model safely if CUDA available, else standard precision
+    if torch.cuda.is_available():
+        from transformers import BitsAndBytesConfig
+        quant_config = BitsAndBytesConfig(load_in_8bit=True)
+        processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
+        model = Blip2ForConditionalGeneration.from_pretrained(
+            "Salesforce/blip2-opt-2.7b", 
+            quantization_config=quant_config, 
+            device_map="auto"
+        )
+    else:
+        processor = AutoProcessor.from_pretrained("Salesforce/blip2-opt-2.7b")
+        model = Blip2ForConditionalGeneration.from_pretrained(
+            "Salesforce/blip2-opt-2.7b"
+        ).to(device)
+    
+    # Process Image and Question
+    image = Image.open(img_path).convert('RGB')
+    prompt = f"Question: {question} Answer:"
+    
+    inputs = processor(images=image, text=prompt, return_tensors="pt").to(model.device)
+    if torch.cuda.is_available():
+        inputs["pixel_values"] = inputs["pixel_values"].to(torch.float16)
+    
+    # Inference
+    generated_ids = model.generate(**inputs, max_new_tokens=30)
+    answer = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+    
+    if "Answer:" in answer:
+        answer = answer.split("Answer:")[-1].strip()
+
+    # VRAM SAVING HACK
+    del model
+    del processor
+    torch.cuda.empty_cache()
+    
+    return answer

@@ -1,33 +1,36 @@
 import os
 import shutil
+from typing import List
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from fastapi.staticfiles import StaticFiles
-
 
 # Import our VRAM-optimized Agent Tools
-from tools.agent_tools import tool_detect_change, tool_answer_vqa, tool_segment_image, tool_detect_objects
+from tools.agent_tools import (
+    tool_detect_change, 
+    tool_answer_vqa, 
+    tool_segment_image, 
+    tool_detect_objects
+)
 from tools.orchestrator_main import run_smart_agent
 
 app = FastAPI(
-    title="Jaldrishti ML Backend", 
-    description="Offline REST API for the SIH 2026 Presentation (Runs on RTX 4060)",
+    title="Jaldrishti / PIXEL-Srishti ML Backend", 
+    description="REST API for the SIH 2026 Presentation (Runs on RTX 4060)",
     version="1.0"
 )
 
-# Enable CORS so the JS frontend can make requests from localhost
+# Enable CORS so the React / Next.js / Vite frontend can make requests from localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production you'd restrict this, but * is fine for a local demo
-    allow_credentials=False,
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 TEMP_DIR = "temp_uploads"
 os.makedirs(TEMP_DIR, exist_ok=True)
-app.mount("/outputs", StaticFiles(directory="."), name="outputs")
 
 @app.post("/api/detect_change")
 async def api_detect_change(
@@ -46,10 +49,13 @@ async def api_detect_change(
         with open(path2, "wb") as buffer:
             shutil.copyfileobj(image2.file, buffer)
             
-        # Run our Agent Tool (which loads the model, infers, and clears VRAM instantly)
-        result = tool_detect_change(path1, path2)
+        result_text, mask_path = tool_detect_change(path1, path2)
         
-        return {"status": "success", "result": result}
+        return {
+            "status": "success", 
+            "description": result_text, 
+            "mask_path": mask_path
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -59,14 +65,13 @@ async def api_ask_question(
     question: str = Form(...)
 ):
     """
-    Endpoint for answering specific queries (VQA) like "How many new houses?"
+    Endpoint for answering specific queries (VQA) using BLIP-2.
     """
     try:
         path = os.path.join(TEMP_DIR, image.filename)
         with open(path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
             
-        # Run VQA Tool (Loads BLIP-2 + Grounding DINO, infers, clears VRAM)
         answer = tool_answer_vqa(path, question)
         
         return {"status": "success", "answer": answer}
@@ -85,10 +90,13 @@ async def api_segment(
         with open(path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
             
-        # Run Segmentation Tool (Loads DeepLabV3+, infers, clears VRAM)
         result_text, mask_path = tool_segment_image(path)
         
-        return {"status": "success", "description": result_text, "mask_path": mask_path}
+        return {
+            "status": "success", 
+            "description": result_text, 
+            "mask_path": mask_path
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -99,21 +107,17 @@ async def api_detect_objects(
 ):
     """
     Endpoint for Zero-Shot Object Detection using Grounding DINO.
-    Pass a query like 'houses' or 'water pump' to get bounding boxes.
     """
     try:
         path = os.path.join(TEMP_DIR, image.filename)
         with open(path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
             
-        # Run Object Detection Tool (Loads Grounding DINO, infers, clears VRAM)
         result = tool_detect_objects(path, query)
         
         return {"status": "success", "data": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-from typing import List
 
 @app.post("/api/chat")
 async def api_chat(
@@ -122,7 +126,7 @@ async def api_chat(
 ):
     """
     Master Agentic Endpoint. 
-    Frontend just sends the user's natural language query and any uploaded images.
+    Frontend sends the user's natural language query and any uploaded images.
     The Backend Orchestrator automatically handles tool routing, fallback, and synthesis.
     """
     try:
@@ -147,4 +151,3 @@ async def health_check():
 if __name__ == "__main__":
     print("Starting Jaldrishti ML Backend on http://localhost:8000...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
-

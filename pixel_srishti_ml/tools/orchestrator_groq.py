@@ -111,7 +111,7 @@ def run_groq_orchestrator(user_query: str, uploaded_images: list[str]) -> str:
         raise GroqOrchestratorError("GROQ_API_KEY environment variable is not set.")
     
     try:
-        client = Groq(api_key=api_key, timeout=20.0) # 20 second timeout
+        client = Groq(api_key=api_key, timeout=20.0)
     except Exception as e:
         raise GroqOrchestratorError(f"Failed to initialize Groq client: {str(e)}")
 
@@ -135,7 +135,6 @@ def run_groq_orchestrator(user_query: str, uploaded_images: list[str]) -> str:
     ]
 
     try:
-        # Step 1: Initial call to Groq
         response = client.chat.completions.create(
             model="llama3-70b-8192",
             messages=messages,
@@ -147,16 +146,13 @@ def run_groq_orchestrator(user_query: str, uploaded_images: list[str]) -> str:
         response_message = response.choices[0].message
         messages.append(response_message)
         
-        # Step 2: Handle function calls if Groq decided to use tools
         if response_message.tool_calls:
             for tool_call in response_message.tool_calls:
                 func_name = tool_call.function.name
                 func_args = json.loads(tool_call.function.arguments)
                 
-                # Execute our local PyTorch functions
                 tool_result = execute_tool_call(func_name, func_args)
                 
-                # Append tool results to conversation
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -164,7 +160,6 @@ def run_groq_orchestrator(user_query: str, uploaded_images: list[str]) -> str:
                     "content": tool_result
                 })
             
-            # Step 3: Call Groq again to synthesize the final answer
             final_response = client.chat.completions.create(
                 model="llama3-70b-8192",
                 messages=messages,
@@ -172,10 +167,8 @@ def run_groq_orchestrator(user_query: str, uploaded_images: list[str]) -> str:
             )
             return final_response.choices[0].message.content
         else:
-            # If no tools were called, return standard text
             return response_message.content
 
-    # Catching all specific Groq exceptions to reliably trigger the fallback
     except (APIConnectionError, RateLimitError, APIStatusError, GroqError, TimeoutError) as e:
         print(f"[Orchestrator] Groq API Error: {str(e)}")
         raise GroqOrchestratorError(f"Groq network or limit failure: {str(e)}")
